@@ -255,11 +255,16 @@ public class Crawler {
                         link = link.substring(0, link.lastIndexOf('/') + 1);
                     }
                     logger.error(TAG+ "link=" + link);
-                    book.sources.add(new SearchBook.SL(link, source));
                     book.author = getNodeStr(jxNode, config.search.authorXpath);
+
+
                     if (source.id == SourceID.CHINESEZHUOBI.getId() || source.id == SourceID.CHINESEXIAOSHUO.getId()) {
                         book.author = book.author.replace("作者：", "");
                     }
+
+                    SearchBook.SL slTemp = new SearchBook.SL(link, source);
+                    slTemp.setBookId(book.getBookId());
+                    book.sources.add(slTemp);
                     logger.error(TAG+  "author=" + book.author);
                     book.desc = getNodeStr(jxNode, config.search.descXpath).trim();
                     logger.error(TAG+  "desc=" + book.desc);
@@ -374,11 +379,17 @@ public class Crawler {
                         link = link.substring(0, link.lastIndexOf('/') + 1);
                     }
                     logger.error(TAG+ "link=" + link);
-                    book.sources.add(new SearchBook.SL(link, source));
                     book.author = getNodeStr(jxNode, config.search.authorXpath);
+
+
+
+
                     if (source.id == SourceID.CHINESEZHUOBI.getId() || source.id == SourceID.CHINESEXIAOSHUO.getId()) {
                         book.author = book.author.replace("作者：", "");
                     }
+                    SearchBook.SL slTemp = new SearchBook.SL(link, source);
+                    slTemp.setBookId(book.getBookId());
+                    book.sources.add(slTemp);
                     logger.error(TAG+  "author=" + book.author);
                     book.desc = getNodeStr(jxNode, config.search.descXpath).trim();
                     logger.error(TAG+  "desc=" + book.desc);

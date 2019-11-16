@@ -1,4 +1,4 @@
-package cn.zero.spider.crawler.entity.chapter;
+package cn.zero.spider.crawler.entity.content;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -10,42 +10,11 @@ import java.io.Serializable;
  */
 @Entity
 
-@Table(name = "chapter")
-public class Chapter implements Serializable {
-    public Long getChapterId() {
-        chapterId = Long.valueOf(link.hashCode());
-        return chapterId;
-    }
-
-    public void setChapterId(Long chapterId) {
-        this.chapterId = chapterId;
-    }
-
+@Table(name = "content")
+public class Content implements Serializable {
     @Id
-    private Long chapterId; // 主键ID
-
-    public String title;
-
-
-    public Long getBookId() {
-        return bookId;
-    }
-
-    public void setBookId(Long bookId) {
-        this.bookId = bookId;
-    }
-
-    private Long bookId; // 书籍ID
-
-//    public Long getChapterId() {
-//        chapterId = Long.valueOf(title.hashCode()+link.hashCode());
-//        return chapterId;
-//    }
-//
-//    public void setChapterId(Long chapterId) {
-//        this.chapterId = chapterId;
-//    }
-
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long contenId; // 主键ID
     public String getTitle() {
         return title;
     }
@@ -70,9 +39,27 @@ public class Chapter implements Serializable {
         this.link = link;
     }
 
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+
+    public String title;
+
+
     public String lastUpdateTime;
 
     public String link;
+
+    //    @Column(columnDefinition = "BLOB NOT NULL")
+    @Lob
+    @Column(columnDefinition = "text")
+    public String content;
+
     @Override
     public String toString() {
         return "Chapter{" +

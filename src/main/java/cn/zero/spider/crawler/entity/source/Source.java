@@ -1,5 +1,7 @@
 package cn.zero.spider.crawler.entity.source;
 
+import javax.persistence.Entity;
+import javax.persistence.Table;
 import java.io.Serializable;
 
 /**
@@ -7,6 +9,7 @@ import java.io.Serializable;
  * <p>
  * Created by yuyuhang on 2018/1/7.
  */
+
 public class Source implements Serializable {
 
 

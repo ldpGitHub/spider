@@ -3,20 +3,54 @@ package cn.zero.spider.crawler.entity.book;
 
 import cn.zero.spider.crawler.entity.source.Source;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 搜索结果（搜索时，书名和作者名一样时，认为是同一本书，合并起来，同时增加一个源）
  * <p>
  * Created by yuyuhang on 2018/1/7.
  */
+@Entity
+
+@Table(name = "search_book")
 public class SearchBook implements Serializable {
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SearchBook)) return false;
+        SearchBook that = (SearchBook) o;
+        return getTitle().equals(that.getTitle()) &&
+                getAuthor().equals(that.getAuthor());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getTitle(), getAuthor());
+    }
+
+
 
     public String getCover() {
         return cover;
     }
+
+    public Long getBookId() {
+        bookId = Long.valueOf(this.hashCode());
+        return bookId;
+    }
+
+    public void setBookId(Long bookId) {
+        this.bookId = bookId;
+    }
+
+    @Id
+    private Long bookId; // 书籍Id
+
+
 
     public void setCover(String cover) {
         this.cover = cover;
@@ -83,18 +117,41 @@ public class SearchBook implements Serializable {
     /**
      * 描述
      */
+//    @Column(name = "bookDesc",columnDefinition = "BLOB NOT NULL")
+    @Lob
+    @Column(name = "bookDesc",columnDefinition = "text")
     public String desc;
+
 
     /**
      * 源&目录列表链接
      */
+    @OneToMany(cascade={CascadeType.ALL} )
+    @JoinColumn(name = "bookId")
     public List<SL> sources = new ArrayList<>();
 
     /**
      * 源和对应链接
      */
+    @Entity
     public static class SL implements Serializable{
+        public SL() {
+        }
+
+        @Id
+//        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long bookId; // 主键ID
+
+        public Long getBookId() {
+            return bookId;
+        }
+
+        public void setBookId(Long bookId) {
+            this.bookId = bookId;
+        }
+
         public String link;
+
 
         @Override
         public String toString() {

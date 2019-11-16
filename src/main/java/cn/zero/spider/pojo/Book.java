@@ -1,5 +1,9 @@
 package cn.zero.spider.pojo;
 
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 import java.io.Serializable;
 
 /**
@@ -7,8 +11,11 @@ import java.io.Serializable;
  * @date 2018/6/23 19:30
  */
 
+@Entity
 public class Book implements Serializable {
-
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id; // 主键ID
     /**
      * 小说链接
      */

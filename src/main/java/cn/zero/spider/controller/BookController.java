@@ -4,10 +4,15 @@ import cn.zero.spider.crawler.Crawler;
 import cn.zero.spider.crawler.entity.MyView;
 import cn.zero.spider.crawler.entity.book.SearchBook;
 import cn.zero.spider.crawler.entity.chapter.Chapter;
+import cn.zero.spider.crawler.entity.content.Content;
 import cn.zero.spider.crawler.source.callback.ChapterCallback;
+import cn.zero.spider.crawler.source.callback.ContentCallback;
 import cn.zero.spider.crawler.source.callback.SearchCallback;
 import cn.zero.spider.pojo.Article;
 import cn.zero.spider.pojo.Book;
+import cn.zero.spider.repository.ChapterRepository;
+import cn.zero.spider.repository.ContentRepository;
+import cn.zero.spider.repository.SearchResultRepository;
 import cn.zero.spider.service.IArticleService;
 import cn.zero.spider.service.IBookService;
 import cn.zero.spider.webmagic.page.BiQuGePageProcessor;
@@ -19,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,13 +39,11 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 /**
  * 小说控制器
@@ -49,8 +53,15 @@ import java.util.concurrent.Executors;
  */
 @RestController
 public class BookController extends BaseController {
-
+    private static final String TAG  = BookController.class.getSimpleName();
     private Logger logger = LoggerFactory.getLogger(BookController.class);
+
+    @Autowired
+    private SearchResultRepository searchResultRepository;
+    @Autowired
+    private ChapterRepository chapterRepository;
+    @Autowired
+    private ContentRepository contentRepository;
 
     @Autowired
     private IBookService bookService;
@@ -76,60 +87,285 @@ public class BookController extends BaseController {
     private String spiderUrl;
 
 
+    private List<SearchBook> userResult = new ArrayList<>();
     private List<SearchBook> finalResult = new ArrayList<>();
+    private List<Chapter> chapterList = new ArrayList<>();
 
 
 
     /**
      * 搜索小说
      *
-     * @param bookName 小说名称
-     * @return book book
+     * @param request 请求
+     * @return userResult 搜索结果
      */
 
-    @RequestMapping(value = "/{bookName}")
-    public  List<SearchBook> book (@PathVariable("bookName") String bookName, HttpServletRequest request) {
-
-        finalResult.clear();
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.submit(new Runnable() {
-            @Override
-            public void run() {
-
-            }
-        });
+    @RequestMapping( "/search")
+    public  List<SearchBook> userSearch ( HttpServletRequest request) {
+        userResult.clear();
+        String bookName = request.getParameter("bookName");
         Crawler.userSearch(bookName, new SearchCallback() {
             @Override
             public synchronized void onResponse(String keyword, List<SearchBook> appendList) {
                 logger.error("搜索结果:" + keyword + ": " + appendList);
                 if (appendList.size() > 0) {
-                    finalResult.addAll(appendList);
+                    userResult.addAll(appendList);
                 }
-
             }
-
             @Override
             public void onFinish() {
-                logger.error("onFinish: 结果大小" + finalResult.size());
+                logger.error("onFinish: 结果大小" + userResult.size());
             }
-
             @Override
             public void onError(String msg) {
                 logger.error(msg);
             }
         });
-        logger.error("请求到了: "+finalResult);
+        logger.error("请求到了: "+userResult);
         ModelAndView modelAndView = new ModelAndView(new MyView());
         Map<String, Object> data = new HashMap<>();
         data.put("success",true);
         data.put("message","成功");
-        data.put("res",new Gson().toJson(finalResult) );
+        data.put("res",new Gson().toJson(userResult) );
         modelAndView.addAllObjects(data);
+        searchResultRepository.saveAll(userResult);
+        return userResult;
+    }
 
-        return finalResult;
+
+
+    /**
+     * 搜索小说
+     *
+     * @param request 请求
+     * @return bookResult 小说详情
+     */
+    SearchBook bookResult = null ;
+    @RequestMapping( "/getBookInfo")
+    public SearchBook getBookInfo (HttpServletRequest request) {
+
+        Long  bookId = 0L;
+        try {
+            bookId= Long.valueOf(request.getParameter("bookId"));
+        }catch (Exception e){
+            logger.error(e.toString());
+        }
+       Optional<SearchBook> book= searchResultRepository.findById(bookId);
+        book.ifPresent(new Consumer<SearchBook>() {
+            @Override
+            public void accept(SearchBook searchBook) {
+                bookResult =searchBook;
+            }
+        });
+        return  bookResult;
 
     }
 
+    /**
+     * 获取目录
+     *
+     * @param request 请求
+     * @return
+     */
+   private  Optional<SearchBook> book = null;
+    @RequestMapping( "/getBookFolder")
+    public List<Chapter>  getBookFolder (HttpServletRequest request) {
+         List<Chapter> chaptersResult = new ArrayList<>();
+        Long  bookId = 0L;
+        try {
+            bookId= Long.valueOf(request.getParameter("bookId"));
+        }catch (Exception e){
+            logger.error(e.toString());
+        }
+       book= searchResultRepository.findById(bookId);
+        book.ifPresent(new Consumer<SearchBook>() {
+            @Override
+            public void accept(SearchBook searchBook) {
+                if(searchBook.sources.isEmpty()){
+                    return;
+                }
+               Crawler.catalog(searchBook.sources.get(0), new ChapterCallback() {
+                   @Override
+                   public void onResponse(List<Chapter> chapters) {
+                       for (Chapter chapter:chapters) {
+                           chapter.setBookId(searchBook.getBookId());
+                       }
+                       chaptersResult.addAll(chapters);
+                       ExecutorService folderService = Executors.newSingleThreadExecutor();
+                       folderService.submit(new Runnable() {
+                           @Override
+                           public void run() {
+                               chapterRepository.saveAll(chapters);
+
+                           }
+                       });
+                   }
+
+                   @Override
+                   public void onError(String msg) {
+
+                   }
+               });
+            }
+        });
+        return  chaptersResult;
+    }
+
+
+    /**
+     * 获取内容
+     *
+     * @param request 请求
+     * @return
+     */
+
+    private  Optional<Chapter> chapter = null;
+    Content contentResponse = null;
+
+    @RequestMapping("/getBookContent")
+    public Content getBookContent(HttpServletRequest request) {
+        Long bookId = 0L;
+        Long chapterId = 0L;
+
+        try {
+            bookId = Long.valueOf(request.getParameter("bookId"));
+            chapterId = Long.valueOf(request.getParameter("chapterId"));
+
+        } catch (Exception e) {
+            logger.error(e.toString());
+        }
+        book = searchResultRepository.findById(bookId);
+        chapter = chapterRepository.findById(chapterId);
+        if (book.isPresent() && chapter.isPresent()) {
+            Crawler.content(book.get().sources.get(0), chapter.get().link, new ContentCallback() {
+                @Override
+                public void onResponse(String content) {
+                    Content chapterContent = new Content();
+                    chapterContent.setContent(content);
+                    chapterContent.setLink( chapter.get().link);
+                    chapterContent.setTitle( chapter.get().title);
+                    contentRepository.save(chapterContent);
+                    contentResponse = chapterContent;
+                }
+
+                @Override
+                public void onError(String msg) {
+
+                }
+            });
+        }
+
+
+        return contentResponse;
+    }
+
+
+//    /**
+//     * 搜索小说
+//     *
+//     * @param bookName 小说名称
+//     * @return book book
+//     */
+//
+//    @RequestMapping(value = "/{bookName}")
+//    public  List<SearchBook> book (@PathVariable("bookName") String bookName, HttpServletRequest request) {
+//
+//        userResult.clear();
+//        finalResult.clear();
+//
+//
+//        Crawler.userSearch(bookName, new SearchCallback() {
+//            @Override
+//            public synchronized void onResponse(String keyword, List<SearchBook> appendList) {
+//                logger.error("搜索结果:" + keyword + ": " + appendList);
+//                if (appendList.size() > 0) {
+//                    userResult.addAll(appendList);
+//                }
+//
+//            }
+//
+//            @Override
+//            public void onFinish() {
+//                logger.error("onFinish: 结果大小" + userResult.size());
+//            }
+//
+//            @Override
+//            public void onError(String msg) {
+//                logger.error(msg);
+//            }
+//        });
+//        logger.error("请求到了: "+userResult);
+//        ModelAndView modelAndView = new ModelAndView(new MyView());
+//        Map<String, Object> data = new HashMap<>();
+//        data.put("success",true);
+//        data.put("message","成功");
+//        data.put("res",new Gson().toJson(userResult) );
+//        modelAndView.addAllObjects(data);
+//        searchResultRepository.saveAll(userResult);
+//        ExecutorService bookSerVice= Executors.newSingleThreadExecutor();
+//        bookSerVice.submit(new Runnable() {
+//            @Override
+//            public void run() {
+//                Crawler.search(bookName, new SearchCallback() {
+//                    @Override
+//                    public void onResponse(String keyword, List<SearchBook> appendList) {
+//                        if (appendList.size() > 0) {
+//                            finalResult.addAll(appendList);
+//                        }
+//
+//                    }
+//
+//                    @Override
+//                    public void onFinish() {
+//                        searchResultRepository.saveAll(finalResult);
+//                        for (SearchBook searchBookItem:finalResult) {
+//                            for (SearchBook.SL slItem:searchBookItem.getSources())
+//                            Crawler.catalog(slItem, new ChapterCallback() {
+//                                @Override
+//                                public void onResponse(List<Chapter> chapters) {
+//                                    chapterList.addAll(chapters);
+//                                    chapterRepository.saveAll(chapterList);
+//                                    for (Chapter chapterItem:chapterList) {
+//                                        logger.info(TAG,chapterItem);
+//
+//                                        Crawler.content(slItem, chapterItem.link, new ContentCallback() {
+//                                            @Override
+//                                            public void onResponse(String content) {
+//                                                Content chapterContent = new Content();
+//                                                chapterContent.setContent(content);
+//                                                chapterContent.setLink(chapterItem.link);
+//                                                chapterContent.setTitle(searchBookItem.title);
+//                                                contentRepository.save(chapterContent);
+//                                            }
+//
+//                                            @Override
+//                                            public void onError(String msg) {
+//
+//                                            }
+//                                        });
+//
+//                                    }
+//                                }
+//
+//                                @Override
+//                                public void onError(String msg) {
+//
+//                                }
+//                            });
+//                        }
+//                    }
+//
+//                    @Override
+//                    public void onError(String msg) {
+//
+//                    }
+//                });
+//            }
+//        });
+//        return userResult;
+//
+//    }
+//
 
 
 
@@ -204,9 +440,9 @@ public class BookController extends BaseController {
     /**
      * 手动更新小说
      */
-    @RequestMapping("booksUpdate")
-    public void update() {
-        againSpider.books();
-    }
+//    @RequestMapping("booksUpdate")
+//    public void update() {
+//        againSpider.books();
+//    }
 
 }
