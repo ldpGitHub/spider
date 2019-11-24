@@ -4,12 +4,15 @@ import cn.zero.spider.crawler.Crawler;
 import cn.zero.spider.crawler.entity.MyView;
 import cn.zero.spider.crawler.entity.book.SearchBook;
 import cn.zero.spider.crawler.entity.chapter.Chapter;
+import cn.zero.spider.crawler.entity.chapter.ChapterList;
 import cn.zero.spider.crawler.entity.content.Content;
+import cn.zero.spider.crawler.entity.source.SourceConfig;
 import cn.zero.spider.crawler.source.callback.ChapterCallback;
 import cn.zero.spider.crawler.source.callback.ContentCallback;
 import cn.zero.spider.crawler.source.callback.SearchCallback;
 import cn.zero.spider.pojo.Article;
 import cn.zero.spider.pojo.Book;
+import cn.zero.spider.repository.ChapterListRepository;
 import cn.zero.spider.repository.ChapterRepository;
 import cn.zero.spider.repository.ContentRepository;
 import cn.zero.spider.repository.SearchResultRepository;
@@ -20,11 +23,14 @@ import cn.zero.spider.webmagic.page.BiQuGeSearchPageProcessor;
 import cn.zero.spider.webmagic.pipeline.BiQuGePipeline;
 import cn.zero.spider.webmagic.task.AgainSpider;
 import com.google.gson.Gson;
+import com.sun.org.apache.regexp.internal.RE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -62,6 +68,8 @@ public class BookController extends BaseController {
     private ChapterRepository chapterRepository;
     @Autowired
     private ContentRepository contentRepository;
+    @Autowired
+    private ChapterListRepository chapterListRepository;
 
     @Autowired
     private IBookService bookService;
@@ -87,8 +95,8 @@ public class BookController extends BaseController {
     private String spiderUrl;
 
 
-    private List<SearchBook> userResult = new ArrayList<>();
-    private List<SearchBook> finalResult = new ArrayList<>();
+    private List<SearchBook> userResult ;
+    private List<SearchBook> finalResult ;
     private List<Chapter> chapterList = new ArrayList<>();
 
 
@@ -102,9 +110,10 @@ public class BookController extends BaseController {
 
     @RequestMapping( "/search")
     public  List<SearchBook> userSearch ( HttpServletRequest request) {
-        userResult.clear();
+        userResult =new ArrayList<>();
+        finalResult = new ArrayList<>();
         String bookName = request.getParameter("bookName");
-        Crawler.userSearch(bookName, new SearchCallback() {
+        Crawler.search(bookName,true, new SearchCallback() {
             @Override
             public synchronized void onResponse(String keyword, List<SearchBook> appendList) {
                 logger.error("搜索结果:" + keyword + ": " + appendList);
@@ -121,7 +130,40 @@ public class BookController extends BaseController {
                 logger.error(msg);
             }
         });
-        logger.error("请求到了: "+userResult);
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.submit(() -> {
+            Crawler.search(bookName,false, new SearchCallback() {
+                @Override
+                public void onResponse(String keyword, List<SearchBook> appendList) {
+                    for (SearchBook searchBook : appendList) {
+                        if (finalResult.contains(searchBook)) {
+                            finalResult.get(finalResult.indexOf(searchBook)).getSources().addAll(searchBook.getSources());
+                            logger.info("增加书源头: " + finalResult.get(finalResult.indexOf(searchBook)).getSources());
+
+                        } else {
+                            finalResult.add(searchBook);
+                        }
+                    }
+
+                }
+
+                @Override
+                public void onFinish() {
+                    logger.info("爬取完成: " + finalResult);
+                    for (SearchBook searchBook: finalResult) {
+                        searchResultRepository.saveAndFlush(searchBook);
+                    }
+                }
+
+                @Override
+                public void onError(String msg) {
+
+                }
+            });
+        });
+
+        logger.info("请求到了: "+userResult);
         ModelAndView modelAndView = new ModelAndView(new MyView());
         Map<String, Object> data = new HashMap<>();
         data.put("success",true);
@@ -140,26 +182,104 @@ public class BookController extends BaseController {
      * @param request 请求
      * @return bookResult 小说详情
      */
-    SearchBook bookResult = null ;
+    private  SearchBook bookResult = null ;
+
     @RequestMapping( "/getBookInfo")
     public SearchBook getBookInfo (HttpServletRequest request) {
-
         Long  bookId = 0L;
         try {
             bookId= Long.valueOf(request.getParameter("bookId"));
         }catch (Exception e){
             logger.error(e.toString());
         }
+        final Long bookIdFinal = bookId;
        Optional<SearchBook> book= searchResultRepository.findById(bookId);
-        book.ifPresent(new Consumer<SearchBook>() {
-            @Override
-            public void accept(SearchBook searchBook) {
-                bookResult =searchBook;
-            }
-        });
-        return  bookResult;
+        book.ifPresent(searchBook -> bookResult =searchBook);
+        return bookResult;
 
     }
+
+    @Scheduled(initialDelay=1000*60*5, fixedRate=1000*60*10)
+    private void checkUpdateSchedule() {
+        List<SearchBook> currentBookList = searchResultRepository.findAll();
+        for (SearchBook searchBook : currentBookList) {
+            checkBookResultSingle(searchBook);
+        }
+    }
+    private ExecutorService executorService = Executors.newCachedThreadPool();
+    private void checkBookResultSingle(SearchBook searchBook) {
+        List<List<Chapter>>   chapterAllWebsite = new ArrayList<>();
+
+        executorService.submit(() -> {
+            for (SearchBook.SL searchBookSL: searchBook.getSources() ) {
+                Crawler.catalog(searchBookSL, new ChapterCallback() {
+                    @Override
+                    public void onResponse(List<Chapter> chapters) {
+//                        logger.info("返回的的列表"+chapters);
+
+                        for (Chapter chapter:chapters) {
+                            chapter.setBookId(searchBook.getBookId());
+                        }
+//                        logger.info("返回的的列表"+chapters);
+//                        logger.info("书籍的Id"+searchBook.getBookId()+"   书籍的名字"+searchBook.getTitle());
+
+                        chapterAllWebsite.add(chapters);
+//                        logger.info("所有的列表"+chapterAllWebsite);
+
+                    }
+
+                    @Override
+                    public void onError(String msg) {
+
+                    }
+                });
+            }
+
+
+            logger.info("最好的列表:"+"书名 "+searchBook.getTitle()+"  最新章节  "+getBestChapterList(chapterAllWebsite).get(getBestChapterList(chapterAllWebsite).size()-1)+"");
+//            logger.info("书籍的比对完成Id"+searchBook.getBookId()+"   书籍的名字"+searchBook.getTitle());
+            List<Chapter> bestChapterList = getBestChapterList(chapterAllWebsite);
+            ChapterList chapterList =   new ChapterList();
+            chapterList.setBookId(searchBook.getBookId());
+            chapterList.setChapterList(bestChapterList);
+            searchBook.setLastChapter(bestChapterList.get(bestChapterList.size() - 1).getTitle()+"更新检测加上去的");
+//            logger.info("储存的列表"+chapterList.getChapterList());
+//            logger.info("所有的的列表"+chapterAllWebsite);
+
+            chapterRepository.saveAll(bestChapterList);
+            chapterListRepository.save(chapterList);
+        });
+    }
+
+    private List<Chapter> getBestChapterList(List<List<Chapter>> chapterAllWebsite) {
+        if (1 == chapterAllWebsite.size()) {
+            return chapterAllWebsite.get(0);
+        }
+        else  if(chapterAllWebsite.size()>2){
+            return getBetterChapterList(chapterAllWebsite.get(0),getBestChapterList(chapterAllWebsite.subList(1,chapterAllWebsite.size()-1))) ;
+        }else if (2 == chapterAllWebsite.size()){
+            List<Chapter> chapterListA = chapterAllWebsite.get(0);
+            List<Chapter> chapterListB = chapterAllWebsite.get(1);
+            return   getBetterChapterList(chapterListA,chapterListB);
+        }else {
+            return chapterAllWebsite.get(0);
+        }
+    }
+
+  private List<Chapter> getBetterChapterList( List<Chapter> chapterListA , List<Chapter> chapterListB){
+//        logger.info(chapterListA.get(chapterListA.size() - 1) +"    "+chapterListB.get(chapterListB.size()-1));
+        if(chapterListA.size()<chapterListB.size() - 30){
+            return chapterListB;
+        }
+      List<Chapter> chapterListALast100 = chapterListA.subList(chapterListA.size()-1 - 100,chapterListA.size()-1);
+      List<Chapter> chapterListBLast100 = chapterListB.subList(chapterListB.size()-1 - 100,chapterListB.size()-1);
+      for (Chapter chapterA:chapterListALast100) {
+          if (-1 == chapterListBLast100.indexOf(chapterA)){
+              return  chapterListA;
+          }
+      }
+      return  chapterListB;
+  }
 
     /**
      * 获取目录
@@ -177,38 +297,45 @@ public class BookController extends BaseController {
         }catch (Exception e){
             logger.error(e.toString());
         }
-       book= searchResultRepository.findById(bookId);
-        book.ifPresent(new Consumer<SearchBook>() {
-            @Override
-            public void accept(SearchBook searchBook) {
+        Optional<ChapterList>  chapterList = chapterListRepository.findById(bookId);
+        if (chapterList.isPresent()){
+            logger.info("数据库拿的" +chapterList.get().getChapterList());
+
+            return  chapterList.get().getChapterList();
+        }else {
+            book= searchResultRepository.findById(bookId);
+            book.ifPresent(searchBook -> {
                 if(searchBook.sources.isEmpty()){
                     return;
                 }
-               Crawler.catalog(searchBook.sources.get(0), new ChapterCallback() {
-                   @Override
-                   public void onResponse(List<Chapter> chapters) {
-                       for (Chapter chapter:chapters) {
-                           chapter.setBookId(searchBook.getBookId());
-                       }
-                       chaptersResult.addAll(chapters);
-                       ExecutorService folderService = Executors.newSingleThreadExecutor();
-                       folderService.submit(new Runnable() {
-                           @Override
-                           public void run() {
-                               chapterRepository.saveAll(chapters);
 
-                           }
-                       });
-                   }
+                Crawler.catalog(searchBook.sources.get(0), new ChapterCallback() {
+                    @Override
+                    public void onResponse(List<Chapter> chapters) {
+                        for (Chapter chapter:chapters) {
+                            chapter.setBookId(searchBook.getBookId());
+                        }
+                        chaptersResult.addAll(chapters);
+                        ExecutorService folderService = Executors.newSingleThreadExecutor();
+                        folderService.submit(new Runnable() {
+                            @Override
+                            public void run() {
+                                chapterRepository.saveAll(chapters);
 
-                   @Override
-                   public void onError(String msg) {
+                            }
+                        });
+                    }
 
-                   }
-               });
-            }
-        });
-        return  chaptersResult;
+                    @Override
+                    public void onError(String msg) {
+
+                    }
+                });
+            });
+            logger.info("直接爬的" +chaptersResult);
+
+            return  chaptersResult;
+        }
     }
 
 

@@ -122,11 +122,20 @@ public class SearchBook implements Serializable {
     @Column(name = "bookDesc",columnDefinition = "text")
     public String desc;
 
+    public String getLastChapter() {
+        return lastChapter;
+    }
+
+    public void setLastChapter(String lastChapter) {
+        this.lastChapter = lastChapter;
+    }
+
+    public String lastChapter;
 
     /**
      * 源&目录列表链接
      */
-    @OneToMany(cascade={CascadeType.ALL} )
+    @OneToMany(fetch=FetchType.EAGER,cascade={CascadeType.ALL},orphanRemoval = true )
     @JoinColumn(name = "bookId")
     public List<SL> sources = new ArrayList<>();
 
@@ -139,8 +148,10 @@ public class SearchBook implements Serializable {
         }
 
         @Id
-//        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long bookId; // 主键ID
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long SLId; // 主键ID
+
+        private Long bookId; // 书籍ID
 
         public Long getBookId() {
             return bookId;

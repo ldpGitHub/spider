@@ -6,8 +6,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 public enum SourceID{
-    LIEWEN(1)  ,
-    CHINESE81(2),
+    CHINESE81(1),
+    LIEWEN(2)  ,
     ZHUISHU(3),
        BIQUG(4),
        WENXUEMI(5),

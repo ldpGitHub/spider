@@ -44,7 +44,7 @@ import java.util.*;
  */
 public class Crawler {
 
-    private static final String TAG = "qy.Crawler";
+    private static final String TAG = Crawler.class.getSimpleName();
     private static  Logger logger = LoggerFactory.getLogger(Crawler.class);
     private static final LinkedHashMap<Integer,SourceConfig> CONFIGS;
 
@@ -93,10 +93,10 @@ public class Crawler {
 
         for (SourceConfig config : list) {
             CONFIGS.put(config.id, config);
-            logger.error(TAG+"  config:  "+config);
+//            logger.error(TAG+"  config:  "+config);
 
         }
-        logger.error(TAG+"CONFIGS:  "+CONFIGS.size());
+//        logger.error(TAG+"CONFIGS:  "+CONFIGS.size());
 
     }
 
@@ -145,16 +145,16 @@ public class Crawler {
      */
     private static final LinkedHashMap<Integer,Source> SOURCES = new LinkedHashMap<Integer,Source>() {
         {
-            put(SourceID.LIEWEN.getId(), new Source(SourceID.LIEWEN.getId(), "猎文网", "https://www.liewen.cc/search.php?keyword=%s"));
             put(SourceID.CHINESE81.getId(), new Source(SourceID.CHINESE81.getId(), "八一中文网", "https://www.zwdu.com/search.php?keyword=%s"));
-            put(SourceID.ZHUISHU.getId(), new Source(SourceID.ZHUISHU.getId(), "追书网", "https://www.zhuishu.tw/search.aspx?keyword=%s"));
-            put(SourceID.BIQUG.getId(), new Source(SourceID.BIQUG.getId(), "笔趣阁", "http://zhannei.baidu.com/cse/search?s=1393206249994657467&q=%s"));
+            put(SourceID.LIEWEN.getId(), new Source(SourceID.LIEWEN.getId(), "猎文网", "https://www.liewen.cc/search.php?keyword=%s"));
+            put(SourceID.ZHUISHU.getId(), new Source(SourceID.ZHUISHU.getId(), "追书网", "https://www.mangg.net/search.aspx?keyword=%s"));
+            put(SourceID.BIQUG.getId(), new Source(SourceID.BIQUG.getId(), "新笔趣阁", "https://www.xbiquge6.com/search.php?keyword=%s"));
             put(SourceID.WENXUEMI.getId(), new Source(SourceID.WENXUEMI.getId(), "文学迷", "http://www.wenxuemi.com/search.php?keyword=%s"));
-            put(SourceID.CHINESEXIAOSHUO.getId(), new Source(SourceID.CHINESEXIAOSHUO.getId(), "小说中文网", "http://www.xszww.com/s.php?ie=gbk&s=10385337132858012269&q=%s"));
-            put(SourceID.DINGDIAN.getId(), new Source(SourceID.DINGDIAN.getId(), "顶点小说", "http://zhannei.baidu.com/cse/search?s=1682272515249779940&q=%s"));
-            put(SourceID.BIQUGER.getId(), new Source(SourceID.BIQUGER.getId(), "笔趣阁2", "http://zhannei.baidu.com/cse/search?s=7928441616248544648&ie=utf-8&q=%s"));
-            put(SourceID.CHINESEZHUOBI.getId(), new Source(SourceID.CHINESEZHUOBI.getId(), "着笔中文网", "http://www.zbzw.com/s.php?ie=utf-8&s=4619765769851182557&q=%s"));
-            put(SourceID.DASHUBAO.getId(), new Source(SourceID.DASHUBAO.getId(), "大书包", "http://zn.dashubao.net/cse/search?s=9410583021346449776&entry=1&ie=utf-8&q=%s"));
+            put(SourceID.CHINESEXIAOSHUO.getId(), new Source(SourceID.CHINESEXIAOSHUO.getId(), "小说中文网", "https://so.biqusoso.com/s.php?ie=utf-8&siteid=xszww.com&q=%s"));
+            put(SourceID.DINGDIAN.getId(), new Source(SourceID.DINGDIAN.getId(), "顶点小说", "https://www.booktxt.com/search.php?keyword=%s"));
+            put(SourceID.BIQUGER.getId(), new Source(SourceID.BIQUGER.getId(), "笔趣阁2", "https://www.biquge.com.cn/search.php?keyword=%s"));
+            put(SourceID.CHINESEZHUOBI.getId(), new Source(SourceID.CHINESEZHUOBI.getId(), "着笔中文网", "https://so.biqusoso.com/s.php?ie=gbk&siteid=zbzw.la&q=%s"));
+            put(SourceID.DASHUBAO.getId(), new Source(SourceID.DASHUBAO.getId(), "笔趣阁3", "https://www.biduo.cc/search.php?keyword=%s"));
             put(SourceID.CHINESEWUZHOU.getId(), new Source(SourceID.CHINESEWUZHOU.getId(), "梧州中文台", "http://www.gxwztv.com/search.htm?keyword=%s"));
             put(SourceID.UCSHUMENG.getId(), new Source(SourceID.UCSHUMENG.getId(), "UC书盟", "http://www.uctxt.com/modules/article/search.php?searchkey=%s", 4));
             put(SourceID.QUANXIAOSHUO.getId(), new Source(SourceID.QUANXIAOSHUO.getId(), "全小说", "http://qxs.la/s_%s"));
@@ -171,18 +171,10 @@ public class Crawler {
 
 
 
-    public static void search(@NonNull String keyword, SearchCallback callback) {
-
+    public static void search(@NonNull String keyword ,boolean isUserSearch,SearchCallback callback) {
         LinkedHashMap checkedMap = getSourceEnableSparseArray();
-        logger.info(TAG +"checkedMap:  "+checkedMap );
-        logger.info(TAG +"CONFIGS:  "+CONFIGS.size());
-
         Iterator iter =CONFIGS.entrySet().iterator();
-        logger.info(TAG+"iter"+iter );
-
         while (iter.hasNext()) {
-            logger.info(TAG+ "iter"+iter );
-
             Map.Entry entry = (Map.Entry) iter.next();
             Integer id = (Integer) entry.getKey();
             SourceConfig config= (SourceConfig) entry.getValue();
@@ -190,50 +182,29 @@ public class Crawler {
             logger.info(TAG+ "id" +id);
             logger.info(TAG+ "config" +config);
             logger.info(TAG+ "source" +source);
-
-//            logger.info(TAG+ "跳过"+!(boolean)checkedMap.get(id) );
-
             if (null!=checkedMap.get(id)) {
                 logger.info(TAG+ "跳过"+checkedMap.get(id) );
-
                 continue;
             }
-
-
-
-
-//        for (int i = 0; i < SourceManager.CONFIGS.size(); i++) {
-//            int id = SourceManager.CONFIGS.keyAt(i);
-//            SourceConfig config = SourceManager.CONFIGS.valueAt(i);
-//            Source source = SourceManager.SOURCES.get(id);
-//            if (!checkedMap.get(id)) {
-//                continue;
-//            }
-
             List<JXNode> rs;
             String url;
-
             try {
                 if (!TextUtils.isEmpty(config.search.charset)) {
                     url = String.format(source.searchURL, URLEncoder.encode(keyword, config.search.charset));
-                    logger.info(TAG+"url"+url );
-
+                    logger.info(TAG+"url   "+url );
                 } else {
                     url = String.format(source.searchURL, keyword);
-                    logger.info(TAG+"url"+url );
-
-
+                    logger.info(TAG+"url   "+url );
                 }
-                logger.info(TAG, "url=" + url);
-                JXDocument jxDocument = new JXDocument(Jsoup.connect(url).validateTLSCertificates(false).get());
+                logger.info(TAG, "url=   " + url);
+                JXDocument jxDocument = new JXDocument(Jsoup.connect(url)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36")
+                        .validateTLSCertificates(false).get());
                 rs = jxDocument.selN(config.search.xpath);
                 logger.info(TAG+"jxDocument"+jxDocument );
                 logger.info(TAG+"rs"+rs );
-
-
             } catch (Exception e) {
                 logger.error(TAG+ "Exception=" + e.toString());
-
                 continue;
             }
             if (rs == null) {
@@ -244,20 +215,32 @@ public class Crawler {
                 for (JXNode jxNode : rs) {
                     SearchBook book = new SearchBook();
                     book.cover = urlVerification(getNodeStr(jxNode, config.search.coverXpath), url);
-                    logger.error(TAG+ "url=" +"cover=" + book.cover);
+                    logger.info(TAG+ "url=" +"cover=" + book.cover);
                     book.title = getNodeStr(jxNode, config.search.titleXpath);
-                    logger.error(TAG+ "title=" + book.title);
-                    String link = urlVerification(getNodeStr(jxNode, config.search.linkXpath), url);
+                    logger.info(TAG+ "title=" + book.title);
+
+                    logger.info(TAG+ "原始link=   " + getNodeStr(jxNode, config.search.linkXpath));
+                    String link ="" ;
+                    if (source.id == SourceID.YANMOXUAN .getId()){
+                         link =getNodeStr(jxNode, config.search.linkXpath);
+                        if (link.isEmpty()){
+                            break;
+                        }
+                        link = link.substring(2);
+                        link = link.replace("www.ymoxuan.com","");
+                    }else {
+                        link = urlVerification(getNodeStr(jxNode, config.search.linkXpath), url);
+                    }
+
+
                     if (source.id == SourceID.CHINESEWUZHOU .getId()||
-                            source.id == SourceID.YANMOXUAN .getId()||
+
                             source.id == SourceID.QIANQIANXIAOSHUO .getId()||
                             source.id == SourceID.PIAOTIANWENXUE.getId()) {
                         link = link.substring(0, link.lastIndexOf('/') + 1);
                     }
-                    logger.error(TAG+ "link=" + link);
+                    logger.info(TAG+ "处理后link=   " + link);
                     book.author = getNodeStr(jxNode, config.search.authorXpath);
-
-
                     if (source.id == SourceID.CHINESEZHUOBI.getId() || source.id == SourceID.CHINESEXIAOSHUO.getId()) {
                         book.author = book.author.replace("作者：", "");
                     }
@@ -265,144 +248,31 @@ public class Crawler {
                     SearchBook.SL slTemp = new SearchBook.SL(link, source);
                     slTemp.setBookId(book.getBookId());
                     book.sources.add(slTemp);
-                    logger.error(TAG+  "author=" + book.author);
+                    logger.info(TAG+  "author=" + book.author);
                     book.desc = getNodeStr(jxNode, config.search.descXpath).trim();
-                    logger.error(TAG+  "desc=" + book.desc);
+                 if (null!=config.search.getLastChapterXpath()&&!config.search.getLastChapterXpath().isEmpty()){
+                     if(null==book.getLastChapter()||book.getLastChapter().isEmpty()){
+                         book.setLastChapter(getNodeStr(jxNode, config.search.lastChapterXpath).trim());
+                         logger.info("最新章节:     "+book.getLastChapter());
+                     }
+                 }
+
+                    logger.info(TAG+  "desc=" + book.desc +"" +
+                            "" +
+                            "" +
+                            "" +
+                            "" +
+                            "" +
+                            "                   desc                         "+ "                                      ");
                     if (!TextUtils.isEmpty(link)) {//过滤无效信息
                         books.add(book);
                     }
                 }
                 if (callback != null) {
                     callback.onResponse(keyword, books);
-                }
-            } catch (Exception e) {
-                logger.error(TAG+  e.toString());
-
-                if (callback != null) {
-                    callback.onError(e.toString());
-                    return;
-                }
-            }
-        }
-        logger.info(TAG, callback);
-
-        if (callback != null) {
-            callback.onFinish();
-        }
-    }
-
-    /**
-     * 用户搜索需要尽快返回
-     */
-
-    public static void userSearch(@NonNull String keyword, SearchCallback callback) {
-
-        LinkedHashMap checkedMap = getSourceEnableSparseArray();
-        logger.info(TAG +"checkedMap:  "+checkedMap );
-        logger.info(TAG +"CONFIGS:  "+CONFIGS.size());
-
-        Iterator iter =CONFIGS.entrySet().iterator();
-        logger.info(TAG+"iter"+iter );
-
-        while (iter.hasNext()) {
-            logger.info(TAG+ "iter"+iter );
-
-            Map.Entry entry = (Map.Entry) iter.next();
-            Integer id = (Integer) entry.getKey();
-            SourceConfig config= (SourceConfig) entry.getValue();
-            Source source =SOURCES.get(id);
-            logger.info(TAG+ "id" +id);
-            logger.info(TAG+ "config" +config);
-            logger.info(TAG+ "source" +source);
-
-//            logger.info(TAG+ "跳过"+!(boolean)checkedMap.get(id) );
-
-            if (null!=checkedMap.get(id)) {
-                logger.info(TAG+ "跳过"+checkedMap.get(id) );
-
-                continue;
-            }
-
-
-
-
-//        for (int i = 0; i < SourceManager.CONFIGS.size(); i++) {
-//            int id = SourceManager.CONFIGS.keyAt(i);
-//            SourceConfig config = SourceManager.CONFIGS.valueAt(i);
-//            Source source = SourceManager.SOURCES.get(id);
-//            if (!checkedMap.get(id)) {
-//                continue;
-//            }
-
-            List<JXNode> rs;
-            String url;
-
-            try {
-                if (!TextUtils.isEmpty(config.search.charset)) {
-                    url = String.format(source.searchURL, URLEncoder.encode(keyword, config.search.charset));
-                    logger.info(TAG+"url"+url );
-
-                } else {
-                    url = String.format(source.searchURL, keyword);
-                    logger.info(TAG+"url"+url );
-
-
-                }
-                logger.info(TAG, "url=" + url);
-                JXDocument jxDocument = new JXDocument(Jsoup.connect(url).validateTLSCertificates(false).get());
-                rs = jxDocument.selN(config.search.xpath);
-                logger.info(TAG+"jxDocument"+jxDocument );
-                logger.info(TAG+"rs"+rs );
-
-
-            } catch (Exception e) {
-                logger.error(TAG+ "Exception=" + e.toString());
-
-                continue;
-            }
-            if (rs == null) {
-                continue;
-            }
-            List<SearchBook> books = new ArrayList<>();
-            try { // 提高容错性
-                for (JXNode jxNode : rs) {
-                    SearchBook book = new SearchBook();
-                    book.cover = urlVerification(getNodeStr(jxNode, config.search.coverXpath), url);
-                    logger.error(TAG+ "url=" +"cover=" + book.cover);
-                    book.title = getNodeStr(jxNode, config.search.titleXpath);
-                    logger.error(TAG+ "title=" + book.title);
-                    String link = urlVerification(getNodeStr(jxNode, config.search.linkXpath), url);
-                    if (source.id == SourceID.CHINESEWUZHOU .getId()||
-                            source.id == SourceID.YANMOXUAN .getId()||
-                            source.id == SourceID.QIANQIANXIAOSHUO .getId()||
-                            source.id == SourceID.PIAOTIANWENXUE.getId()) {
-                        link = link.substring(0, link.lastIndexOf('/') + 1);
-                    }
-                    logger.error(TAG+ "link=" + link);
-                    book.author = getNodeStr(jxNode, config.search.authorXpath);
-
-
-
-
-                    if (source.id == SourceID.CHINESEZHUOBI.getId() || source.id == SourceID.CHINESEXIAOSHUO.getId()) {
-                        book.author = book.author.replace("作者：", "");
-                    }
-                    SearchBook.SL slTemp = new SearchBook.SL(link, source);
-                    slTemp.setBookId(book.getBookId());
-                    book.sources.add(slTemp);
-                    logger.error(TAG+  "author=" + book.author);
-                    book.desc = getNodeStr(jxNode, config.search.descXpath).trim();
-                    logger.error(TAG+  "desc=" + book.desc);
-                    if (!TextUtils.isEmpty(link)) {//过滤无效信息
-                        books.add(book);
-                    }
-                }
-                if (callback != null) {
-                    callback.onResponse(keyword, books);
-                    if(books.size()>0){
+                    if(isUserSearch && books.size()>0){
                         return;
                     }
-
                 }
             } catch (Exception e) {
                 logger.error(TAG+  e.toString());
@@ -413,12 +283,12 @@ public class Crawler {
                 }
             }
         }
-        logger.info(TAG, callback);
-
+        logger.info(TAG+callback+"/n/n/n");
         if (callback != null) {
             callback.onFinish();
         }
     }
+
 
     public static void catalog(SearchBook.SL sl, ChapterCallback callback) {
         if (sl == null || sl.source == null || TextUtils.isEmpty(sl.link)) {
@@ -445,6 +315,8 @@ public class Crawler {
                     URI uri = new URI(original.getScheme(), original.getAuthority(), "/" + front + "/" + id + "/", null, null);
                     sl.link = uri.toString();
                 } catch (URISyntaxException e) {
+                    logger.error(TAG+  "URISyntaxException" +e.toString());
+
                     e.printStackTrace();
                 }
             }
@@ -457,16 +329,20 @@ public class Crawler {
                 sl.link = uri.toString();
             } catch (URISyntaxException e) {
                 e.printStackTrace();
+                logger.error(TAG+  "错误" +e.toString());
+
             }
         }
 
         List<JXNode> rs = null;
         try {
-            JXDocument jxDocument = new JXDocument(Jsoup.connect(sl.link).validateTLSCertificates(false).get());
+            JXDocument jxDocument = new JXDocument(Jsoup.connect(sl.link)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36")
+                    .validateTLSCertificates(false).get());
             rs = jxDocument.selN(config.catalog.xpath);
         } catch (Exception e) {
 //            Log.e(TAG, e.toString());
-            logger.error(TAG,  "desc=" +e.toString());
+            logger.error(TAG+ "desc catalog =" +e.toString());
 
         }
 
@@ -484,7 +360,7 @@ public class Crawler {
                 if (!TextUtils.isEmpty(link)) {
                     chapter.link = urlVerification(link, sl.link);
 //                    Log.i(TAG, "link=" + chapter.link);
-                    logger.error(TAG,  "link=" + chapter.link);
+//                    logger.info(TAG,  "link=" + chapter.link);
 
                     chapter.title = getNodeStr(jxNode, config.catalog.titleXpath);
 //                    Log.i(TAG, "title=" + chapter.title);
@@ -498,7 +374,7 @@ public class Crawler {
             }
         } catch (Exception e) {
 //            Log.e(TAG, e.toString());
-            logger.error(TAG,   e.toString());
+            logger.error(TAG+ "请求失败" + e.toString());
 
             callback.onError("请求失败");
         }
@@ -506,7 +382,7 @@ public class Crawler {
 
     public static void content(SearchBook.SL sl, String url, ContentCallback callback) {
 //        Log.i(TAG, "content  url=" + url);
-        logger.error(TAG,   "content  url=" + url);
+//        logger.error(TAG,   "content  url=" + url);
 
         if (sl == null || sl.source == null || TextUtils.isEmpty(sl.link) || TextUtils.isEmpty(url)) {
             if (callback != null) {
@@ -528,7 +404,9 @@ public class Crawler {
         try {
             String link = urlVerification(url, sl.link);
 //            Log.i(TAG, "link =   " + link);
-            JXDocument jxDocument = new JXDocument(Jsoup.connect(link).validateTLSCertificates(false).get());
+            JXDocument jxDocument = new JXDocument(Jsoup.connect(link)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36")
+            .validateTLSCertificates(false).get());
 
             String content = getNodeStr(jxDocument, config.content.xpath);
 
@@ -544,14 +422,14 @@ public class Crawler {
 
             content = builder.toString();
 //            Log.i(TAG, "content =" + content);
-            logger.error(TAG,    "content =" + content);
+//            logger.error(TAG,    "content =" + content);
 
             if (callback != null) {
                 callback.onResponse(content);
             }
         } catch (Exception e) {
 //            Log.e(TAG, e.toString());
-            logger.error(TAG,   e.toString());
+            logger.error(TAG+  e.toString());
 
         }
     }
@@ -581,7 +459,7 @@ public class Crawler {
             }
 
         } catch (XpathSyntaxErrorException e) {
-//            Log.e(TAG, e.toString());
+            logger.error(TAG+"XpathSyntaxErrorException "+e.toString());
         }
         return rs.toString();
     }

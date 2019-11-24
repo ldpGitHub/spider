@@ -2,6 +2,7 @@ package cn.zero.spider.crawler.entity.chapter;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * 章节
@@ -26,6 +27,19 @@ public class Chapter implements Serializable {
 
     public String title;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Chapter)) return false;
+        Chapter chapter = (Chapter) o;
+        return Objects.equals(getTitle(), chapter.getTitle()) &&
+                Objects.equals(getBookId(), chapter.getBookId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getTitle(), getBookId());
+    }
 
     public Long getBookId() {
         return bookId;

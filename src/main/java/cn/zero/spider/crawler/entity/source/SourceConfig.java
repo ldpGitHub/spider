@@ -61,11 +61,23 @@ public class SourceConfig {
 
         public String titleXpath;
 
+        public String getLastChapterXpath() {
+            return lastChapterXpath;
+        }
+
+        public void setLastChapterXpath(String lastChapterXpath) {
+            this.lastChapterXpath = lastChapterXpath;
+        }
+
         public String linkXpath;
 
         public String authorXpath;
 
         public String descXpath;
+
+        public String lastChapterXpath;
+
+
     }
 
     public static class Catalog {
