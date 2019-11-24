@@ -227,7 +227,7 @@ public class Crawler {
                             break;
                         }
                         link = link.substring(2);
-                        link = link.replace("www.ymoxuan.com","");
+//                        link = link.replace("www.ymoxuan.com","");
                     }else {
                         link = urlVerification(getNodeStr(jxNode, config.search.linkXpath), url);
                     }
@@ -244,7 +244,9 @@ public class Crawler {
                     if (source.id == SourceID.CHINESEZHUOBI.getId() || source.id == SourceID.CHINESEXIAOSHUO.getId()) {
                         book.author = book.author.replace("作者：", "");
                     }
-
+                    if (source.id == SourceID.YANMOXUAN.getId()) {
+                        book.author = book.author.replace("作品大全", "");
+                    }
                     SearchBook.SL slTemp = new SearchBook.SL(link, source);
                     slTemp.setBookId(book.getBookId());
                     book.sources.add(slTemp);
