@@ -218,7 +218,6 @@ public class Crawler {
                     logger.info(TAG+ "url=" +"cover=" + book.cover);
                     book.title = getNodeStr(jxNode, config.search.titleXpath);
                     logger.info(TAG+ "title=" + book.title);
-
                     logger.info(TAG+ "原始link=   " + getNodeStr(jxNode, config.search.linkXpath));
                     String link ="" ;
                     if (source.id == SourceID.YANMOXUAN .getId()){
@@ -227,14 +226,12 @@ public class Crawler {
                             break;
                         }
                         link = link.substring(2);
-//                        link = link.replace("www.ymoxuan.com","");
+                        link = "https://"+link;
+
                     }else {
                         link = urlVerification(getNodeStr(jxNode, config.search.linkXpath), url);
                     }
-
-
                     if (source.id == SourceID.CHINESEWUZHOU .getId()||
-
                             source.id == SourceID.QIANQIANXIAOSHUO .getId()||
                             source.id == SourceID.PIAOTIANWENXUE.getId()) {
                         link = link.substring(0, link.lastIndexOf('/') + 1);
@@ -258,14 +255,7 @@ public class Crawler {
                          logger.info("最新章节:     "+book.getLastChapter());
                      }
                  }
-
-                    logger.info(TAG+  "desc=" + book.desc +"" +
-                            "" +
-                            "" +
-                            "" +
-                            "" +
-                            "" +
-                            "                   desc                         "+ "                                      ");
+                    logger.info(TAG+  "desc=" + book.desc );
                     if (!TextUtils.isEmpty(link)) {//过滤无效信息
                         books.add(book);
                     }
@@ -278,7 +268,6 @@ public class Crawler {
                 }
             } catch (Exception e) {
                 logger.error(TAG+  e.toString());
-
                 if (callback != null) {
                     callback.onError(e.toString());
                     return;
@@ -297,15 +286,11 @@ public class Crawler {
             callback.onError("");
             return;
         }
-
         int sourceId = sl.source.id;
         SourceConfig config = CONFIGS.get(sourceId);
-        Source source = SOURCES.get(sourceId);
-
         if (config.catalog == null) {
             return;
         }
-
         if (sourceId == SourceID.CHINESEWUZHOU.getId()) { // 梧州中文台
             int ba = sl.link.indexOf("ba");
             int shtml = sl.link.lastIndexOf(".");
@@ -318,7 +303,6 @@ public class Crawler {
                     sl.link = uri.toString();
                 } catch (URISyntaxException e) {
                     logger.error(TAG+  "URISyntaxException" +e.toString());
-
                     e.printStackTrace();
                 }
             }
@@ -332,10 +316,8 @@ public class Crawler {
             } catch (URISyntaxException e) {
                 e.printStackTrace();
                 logger.error(TAG+  "错误" +e.toString());
-
             }
         }
-
         List<JXNode> rs = null;
         try {
             JXDocument jxDocument = new JXDocument(Jsoup.connect(sl.link)
@@ -343,49 +325,33 @@ public class Crawler {
                     .validateTLSCertificates(false).get());
             rs = jxDocument.selN(config.catalog.xpath);
         } catch (Exception e) {
-//            Log.e(TAG, e.toString());
             logger.error(TAG+ "desc catalog =" +e.toString());
-
         }
-
         if (rs == null || rs.isEmpty()) {
             callback.onError("请求失败");
             return;
         }
-
         List<Chapter> chapters = new ArrayList<>();
         try {
             for (JXNode jxNode : rs) {
                 Chapter chapter = new Chapter();
-
                 String link = getNodeStr(jxNode, config.catalog.linkXpath);
                 if (!TextUtils.isEmpty(link)) {
                     chapter.link = urlVerification(link, sl.link);
-//                    Log.i(TAG, "link=" + chapter.link);
-//                    logger.info(TAG,  "link=" + chapter.link);
-
                     chapter.title = getNodeStr(jxNode, config.catalog.titleXpath);
-//                    Log.i(TAG, "title=" + chapter.title);
                 }
-
                 chapters.add(chapter);
             }
-
             if (callback != null) {
                 callback.onResponse(chapters);
             }
         } catch (Exception e) {
-//            Log.e(TAG, e.toString());
             logger.error(TAG+ "请求失败" + e.toString());
-
             callback.onError("请求失败");
         }
     }
 
     public static void content(SearchBook.SL sl, String url, ContentCallback callback) {
-//        Log.i(TAG, "content  url=" + url);
-//        logger.error(TAG,   "content  url=" + url);
-
         if (sl == null || sl.source == null || TextUtils.isEmpty(sl.link) || TextUtils.isEmpty(url)) {
             if (callback != null) {
                 callback.onError("");
@@ -394,24 +360,18 @@ public class Crawler {
         }
         int sourceId = sl.source.id;
         SourceConfig config =CONFIGS.get(sourceId);
-        Source source =SOURCES.get(sourceId);
-
         if (config.content == null) {
             if (callback != null) {
                 callback.onError("");
             }
             return;
         }
-
         try {
             String link = urlVerification(url, sl.link);
-//            Log.i(TAG, "link =   " + link);
             JXDocument jxDocument = new JXDocument(Jsoup.connect(link)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36")
             .validateTLSCertificates(false).get());
-
             String content = getNodeStr(jxDocument, config.content.xpath);
-
             // 换行
             StringBuilder builder = new StringBuilder();
             String[] lines = content.split(" ");
@@ -421,16 +381,11 @@ public class Crawler {
                     builder.append("        ").append(line).append("\n");
                 }
             }
-
             content = builder.toString();
-//            Log.i(TAG, "content =" + content);
-//            logger.error(TAG,    "content =" + content);
-
             if (callback != null) {
                 callback.onResponse(content);
             }
         } catch (Exception e) {
-//            Log.e(TAG, e.toString());
             logger.error(TAG+  e.toString());
 
         }

@@ -51,14 +51,6 @@ public class Chapter implements Serializable {
 
     private Long bookId; // 书籍ID
 
-//    public Long getChapterId() {
-//        chapterId = Long.valueOf(title.hashCode()+link.hashCode());
-//        return chapterId;
-//    }
-//
-//    public void setChapterId(Long chapterId) {
-//        this.chapterId = chapterId;
-//    }
 
     public String getTitle() {
         return title;
