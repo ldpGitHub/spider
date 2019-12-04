@@ -1,6 +1,7 @@
 package cn.zero.spider.crawler.entity.chapter;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.persistence.*;
@@ -12,33 +13,37 @@ import java.util.Objects;
  * <p>
  * Created by yuyuhang on 2018/1/7.
  */
+@Data
 @Entity
 @Table(name = "chapter")
 public class Chapter implements Serializable {
-    public Long getChapterId() {
-        chapterId = StringUtils.isBlank(link) ? null :  (long)Objects.hash(getTitle(), getBookId());
-        return chapterId;
-    }
 
-    public void setChapterId(Long chapterId) {
-        this.chapterId = chapterId;
-    }
-
+    /**
+     * 主键ID
+     */
     @Id
-    private Long chapterId; // 主键ID
+    private Long chapterId;
 
-
-    public Integer getChapterIndex() {
-        return chapterIndex;
-    }
-
-    public void setChapterIndex(Integer chapterIndex) {
-        this.chapterIndex = chapterIndex;
-    }
-
-    private Integer chapterIndex; //章节排序
+    /**
+     * 章节排序
+     */
+    private Integer chapterIndex;
 
     public String title;
+
+    /**
+     * 书籍ID
+     */
+    private Long bookId;
+
+    public String lastUpdateTime;
+
+    public String link;
+
+    public Long getChapterId() {
+        chapterId = StringUtils.isBlank(link) ? null : (long) Objects.hash(getTitle(), getBookId());
+        return chapterId;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -54,54 +59,4 @@ public class Chapter implements Serializable {
         return Objects.hash(getTitle(), getBookId());
     }
 
-    public Long getBookId() {
-        return bookId;
-    }
-
-    public void setBookId(Long bookId) {
-        this.bookId = bookId;
-    }
-
-
-    private Long bookId; // 书籍ID
-
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-
-    public String getLastUpdateTime() {
-        return lastUpdateTime;
-    }
-
-    public void setLastUpdateTime(String lastUpdateTime) {
-        this.lastUpdateTime = lastUpdateTime;
-    }
-
-    public String getLink() {
-        return link;
-    }
-
-    public void setLink(String link) {
-        this.link = link;
-    }
-
-    public String lastUpdateTime;
-
-
-
-    public String link;
-    @Override
-    public String toString() {
-        return "Chapter{" +
-                "title='" + title + '\'' +
-                ", lastUpdateTime='" + lastUpdateTime + '\'' +
-                ", link='" + link + '\'' +
-                '}';
-    }
 }

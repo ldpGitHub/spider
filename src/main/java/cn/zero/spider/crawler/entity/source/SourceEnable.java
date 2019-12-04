@@ -1,17 +1,15 @@
 package cn.zero.spider.crawler.entity.source;
 
+import lombok.AllArgsConstructor;
+
 /**
  * Created by yuyuhang on 2018/1/12.
  */
+@AllArgsConstructor
 public class SourceEnable {
-
 
     public SourceID id;
 
     public boolean enable;
 
-    public SourceEnable(SourceID id, boolean enable) {
-        this.id = id;
-        this.enable = enable;
-    }
 }
