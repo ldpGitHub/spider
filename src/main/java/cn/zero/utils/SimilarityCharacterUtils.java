@@ -1,8 +1,5 @@
 package cn.zero.utils;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class SimilarityCharacterUtils {
   
     public static void main(String[] args) {  
@@ -10,23 +7,18 @@ public class SimilarityCharacterUtils {
         String str1 = "今天星期四";  
         String str2 = "今天是星期五";  
         getSimilarity(str1,str2);
-    }
-
-    private static String REGEX_CHINESE = "[\u4e00-\u9fa5]";// 中文正则
-
+    }  
+  
     /** 
      * 　　DNA分析 　　拼字检查 　　语音辨识 　　抄袭侦测 
      *  
      * @createTime 2012-1-12 
      */  
     public static double getSimilarity(String str1, String str2) {
-        Pattern pat = Pattern.compile(REGEX_CHINESE);
-        Matcher mat = pat.matcher(str1);
-        str1=(mat.replaceAll(""));
-        str2=(mat.replaceAll(""));
-
-
-        //计算两个字符串的长度。
+        if(str1.equals(str2)){
+            return  1;
+        }
+        //计算两个字符串的长度。  
         int len1 = str1.length();  
         int len2 = str2.length();  
         //建立上面说的数组，比字符长度大一个空间  
@@ -52,12 +44,12 @@ public class SimilarityCharacterUtils {
                         dif[i - 1][j] + 1);  
             }  
         }  
-        System.out.println("字符串\""+str1+"\"与\""+str2+"\"的比较");  
+//        System.out.println("字符串\""+str1+"\"与\""+str2+"\"的比较");
         //取数组右下角的值，同样不同位置代表不同字符串的比较  
-        System.out.println("差异步骤："+dif[len1][len2]);  
+//        System.out.println("差异步骤："+dif[len1][len2]);
         //计算相似度  
         float similarity =1 - (float) dif[len1][len2] / Math.max(str1.length(), str2.length());  
-        System.out.println("相似度："+similarity);
+//        System.out.println("相似度："+similarity);
         return similarity;
     }  
 

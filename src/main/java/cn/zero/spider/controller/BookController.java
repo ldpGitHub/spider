@@ -3,23 +3,25 @@ package cn.zero.spider.controller;
 import cn.zero.spider.crawler.Crawler;
 import cn.zero.spider.crawler.entity.book.SearchBook;
 import cn.zero.spider.crawler.entity.chapter.Chapter;
-import cn.zero.spider.crawler.entity.chapter.ChapterList;
 import cn.zero.spider.crawler.entity.content.Content;
 import cn.zero.spider.crawler.source.callback.ChapterCallback;
 import cn.zero.spider.crawler.source.callback.ContentCallback;
 import cn.zero.spider.crawler.source.callback.SearchCallback;
-import cn.zero.spider.repository.ChapterListRepository;
 import cn.zero.spider.repository.ChapterRepository;
 import cn.zero.spider.repository.ContentRepository;
 import cn.zero.spider.repository.SearchResultRepository;
+import cn.zero.utils.SimilarityCharacterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.Console;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,8 +44,7 @@ public class BookController extends BaseController {
     private ChapterRepository chapterRepository;
     @Autowired
     private ContentRepository contentRepository;
-    @Autowired
-    private ChapterListRepository chapterListRepository;
+
 
     /**
      * 搜索小说
@@ -51,6 +52,7 @@ public class BookController extends BaseController {
      * @param request 请求
      * @return userResult 搜索结果
      */
+    private ExecutorService checkUpdateExecutorService = Executors.newFixedThreadPool(3);
 
     @RequestMapping( "/search")
     public  List<SearchBook> userSearch ( HttpServletRequest request) {
@@ -74,8 +76,8 @@ public class BookController extends BaseController {
             }
         });
 
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.submit(() -> Crawler.search(bookName,false, new SearchCallback() {
+
+        checkUpdateExecutorService.submit(() -> Crawler.search(bookName,false, new SearchCallback() {
             @Override
             public void onResponse(String keyword, List<SearchBook> appendList) {
                 for (SearchBook searchBook : appendList) {
@@ -130,21 +132,32 @@ public class BookController extends BaseController {
             logger.error(e.toString());
         }
        Optional<SearchBook> book= searchResultRepository.findById(bookId);
-        return book.orElse(null);
+        SearchBook searchBook = book.orElse(null);
+        if(searchBook!=null){
+            searchBook.setSelected(true);
+            searchBook.setTitle("我是姚成杰的爸爸");
+            searchResultRepository.save(searchBook);
+
+        }
+        return searchBook;
     }
 
-    @Scheduled(initialDelay=1000*60*5, fixedRate=1000*60*10)
+    @Scheduled(initialDelay=1000*5, fixedRate=1000*60*8)
     private void checkUpdateSchedule() {
         List<SearchBook> currentBookList = searchResultRepository.findAll();
         for (SearchBook searchBook : currentBookList) {
+            if(!searchBook.isSelected()){
+                continue;
+            }
+
             checkBookResultSingle(searchBook);
         }
     }
 
-    private ExecutorService executorService = Executors.newCachedThreadPool();
     private void checkBookResultSingle(SearchBook searchBook) {
         List<List<Chapter>>   chapterAllWebsite = new ArrayList<>();
-        executorService.submit(() -> {
+        checkUpdateExecutorService.submit(() -> {
+            logger.info(searchBook.title);
             for (SearchBook.SL searchBookSL: searchBook.getSources() ) {
                 Crawler.catalog(searchBookSL, new ChapterCallback() {
                     @Override
@@ -156,20 +169,58 @@ public class BookController extends BaseController {
                     }
                     @Override
                     public void onError(String msg) {
-
+                    logger.error("爬取错误 书名" + searchBook.getTitle() +"     " +msg);
                     }
                 });
             }
-            logger.info("最好的列表:"+"书名 "+searchBook.getTitle()+"  最新章节  "+getBestChapterList(chapterAllWebsite).get(getBestChapterList(chapterAllWebsite).size()-1)+"");
-            List<Chapter> bestChapterList = getBestChapterList(chapterAllWebsite);
-            ChapterList chapterList =   new ChapterList();
-            chapterList.setBookId(searchBook.getBookId());
-            chapterList.setChapterList(bestChapterList);
+//            logger.info("最好的列表:"+"书名 "+searchBook.getTitle()+"  最新章节  "+getBestChapterList(chapterAllWebsite).get(getBestChapterList(chapterAllWebsite).size()-1)+"");
+            List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite);
+            logger.info("最好的列表 原列表修正后:"+"书名 "+searchBook.getTitle()+"  最新章节  "+bestChapterList.get(bestChapterList.size() -1)+"");
+
             searchBook.setLastChapter(bestChapterList.get(bestChapterList.size() - 1).getTitle()+"更新检测加上去的");
+            for (int i = 0; i <=bestChapterList.size() - 1 ; i++) {
+                bestChapterList.get(i).setChapterIndex(i);
+            }
             searchResultRepository.save(searchBook);
             chapterRepository.saveAll(bestChapterList);
-            chapterListRepository.save(chapterList);
+
         });
+    }
+
+    private  List<Chapter> baseChapterListModified(List<List<Chapter>> chapterAllWebsite) {
+        List<Chapter> bestChapterList  =  getBestChapterList(chapterAllWebsite);
+        List<Chapter> oriChapterList = chapterAllWebsite.get(0);
+        if(bestChapterList.size() < 100||bestChapterList.size() - oriChapterList.size()>100){
+            return  bestChapterList;
+        }else {
+            List<Chapter> oriChapterListLast10 = oriChapterList.subList(oriChapterList.size() - 11,oriChapterList.size() - 1);
+            int index = 0;
+            double maxSimilarity = 0;
+            for (int i = 0; i <100 ; i++) {
+                List<Chapter> bestChapterListLast10 = bestChapterList.subList(bestChapterList.size() - 11-i,bestChapterList.size() - 1-i);
+                double currentSimilarity = getListSimilarity(oriChapterListLast10,bestChapterListLast10);
+                if( currentSimilarity> maxSimilarity){
+                    maxSimilarity = currentSimilarity;
+                    index = i;
+                }
+            }
+
+            List<Chapter> extraChapters =  bestChapterList.subList(bestChapterList.size() -1 - index,bestChapterList.size() - 1);
+            if(extraChapters.size()> 0){
+                logger.info("多加的列表"+extraChapters.toString());
+            }
+            oriChapterList.addAll(extraChapters);
+            return oriChapterList;
+        }
+    }
+
+    public double getListSimilarity(List<Chapter> oriChapterListLast10,List<Chapter> bestChapterListLast10){
+        assert oriChapterListLast10.size() ==bestChapterListLast10.size();
+        double result = 0;
+        for (int i = 0; i <bestChapterListLast10.size() -1 ; i++) {
+            result += SimilarityCharacterUtils.getSimilarity(bestChapterListLast10.get(i).title,oriChapterListLast10.get(i).title);
+        }
+       return  result;
     }
 
     private List<Chapter> getBestChapterList(List<List<Chapter>> chapterAllWebsite) {
@@ -207,35 +258,43 @@ public class BookController extends BaseController {
      * @param request 请求
      * @return
      */
-
+    private ExecutorService folderService = Executors.newCachedThreadPool();
     @RequestMapping( "/getBookFolder")
-    public List<Chapter>  getBookFolder (HttpServletRequest request) {
+    public List<Chapter>  getBookFolder  (HttpServletRequest request) {
         Optional<SearchBook> book;
-         List<Chapter> chaptersResult = new ArrayList<>();
+        SearchBook searchBookResult;
         Long  bookId = 0L;
         try {
             bookId= Long.valueOf(request.getParameter("bookId"));
         }catch (Exception e){
             logger.error(e.toString());
         }
-        Optional<ChapterList>  chapterList = chapterListRepository.findById(bookId);
-        if (chapterList.isPresent()){
-            logger.info("数据库拿的" +chapterList.get().getChapterList());
-            return  chapterList.get().getChapterList();
+        book= searchResultRepository.findById(bookId);
+
+        searchBookResult = book.orElse(null);
+        assert searchBookResult != null;
+        searchBookResult.setSelected(true);
+        searchResultRepository.save(searchBookResult);
+        Chapter chapterQuery = new Chapter();
+        chapterQuery.setBookId(searchBookResult.getBookId());
+        final List<Chapter>  chaptersResult ;
+        Example<Chapter> exampleChapter= Example.of(chapterQuery);
+        Sort chapterSort  =Sort.by(new Sort.Order(Sort.Direction.ASC,"chapterIndex"));
+        chaptersResult = chapterRepository.findAll(exampleChapter,chapterSort);
+        logger.info("结果大小:"+chaptersResult.size());
+        if (chaptersResult.size()>0){
+            return  chaptersResult;
         }else {
-            book= searchResultRepository.findById(bookId);
-            book.ifPresent(searchBook -> {
-                if(searchBook.sources.isEmpty()){
-                    return;
-                }
-                Crawler.catalog(searchBook.sources.get(0), new ChapterCallback() {
+                Crawler.catalog(searchBookResult.sources.get(0), new ChapterCallback() {
                     @Override
                     public void onResponse(List<Chapter> chapters) {
                         for (Chapter chapter:chapters) {
-                            chapter.setBookId(searchBook.getBookId());
+                            chapter.setBookId(searchBookResult.getBookId());
                         }
                         chaptersResult.addAll(chapters);
-                        ExecutorService folderService = Executors.newSingleThreadExecutor();
+                        for (int i = 0; i <=chapters.size() - 1 ; i++) {
+                            chapters.get(i).setChapterIndex(i);
+                        }
                         folderService.submit(() -> {
                             chapterRepository.saveAll(chapters);
                         });
@@ -245,11 +304,11 @@ public class BookController extends BaseController {
 
                     }
                 });
-            });
+            }
             logger.info("直接爬的" +chaptersResult);
             return  chaptersResult;
         }
-    }
+
 
 
     /**
@@ -275,6 +334,8 @@ public class BookController extends BaseController {
         book = searchResultRepository.findById(bookId);
         chapter = chapterRepository.findById(chapterId);
         if (book.isPresent() && chapter.isPresent()) {
+            logger.info(book.get().sources.toString());
+
             Crawler.content(book.get().sources.get(0), chapter.get().link, new ContentCallback() {
                 @Override
                 public void onResponse(String content) {

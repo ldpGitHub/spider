@@ -1,5 +1,8 @@
 package cn.zero.spider.crawler.entity.chapter;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.commons.lang3.StringUtils;
+
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Objects;
@@ -10,11 +13,10 @@ import java.util.Objects;
  * Created by yuyuhang on 2018/1/7.
  */
 @Entity
-
 @Table(name = "chapter")
 public class Chapter implements Serializable {
     public Long getChapterId() {
-        chapterId = Long.valueOf(link.hashCode());
+        chapterId = StringUtils.isBlank(link) ? null :  (long)Objects.hash(getTitle(), getBookId());
         return chapterId;
     }
 
@@ -24,6 +26,17 @@ public class Chapter implements Serializable {
 
     @Id
     private Long chapterId; // 主键ID
+
+
+    public Integer getChapterIndex() {
+        return chapterIndex;
+    }
+
+    public void setChapterIndex(Integer chapterIndex) {
+        this.chapterIndex = chapterIndex;
+    }
+
+    private Integer chapterIndex; //章节排序
 
     public String title;
 
@@ -49,6 +62,7 @@ public class Chapter implements Serializable {
         this.bookId = bookId;
     }
 
+
     private Long bookId; // 书籍ID
 
 
@@ -59,6 +73,7 @@ public class Chapter implements Serializable {
     public void setTitle(String title) {
         this.title = title;
     }
+
 
     public String getLastUpdateTime() {
         return lastUpdateTime;
@@ -77,6 +92,8 @@ public class Chapter implements Serializable {
     }
 
     public String lastUpdateTime;
+
+
 
     public String link;
     @Override

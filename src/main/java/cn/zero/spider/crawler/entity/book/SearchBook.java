@@ -32,6 +32,15 @@ public class SearchBook implements Serializable {
         return Objects.hash(getTitle(), getAuthor());
     }
 
+    public boolean isSelected() {
+        return isSelected;
+    }
+
+    public void setSelected(boolean selected) {
+        isSelected = selected;
+    }
+
+    private boolean isSelected;
 
 
     public String getCover() {

@@ -325,10 +325,10 @@ public class Crawler {
                     .validateTLSCertificates(false).get());
             rs = jxDocument.selN(config.catalog.xpath);
         } catch (Exception e) {
-            logger.error(TAG+ "desc catalog =" +e.toString());
+            logger.error(TAG+ "desc catalog =" +e.toString() +"   ");
         }
         if (rs == null || rs.isEmpty()) {
-            callback.onError("请求失败");
+            callback.onError("返回资源为空 请求失败"  + "    "+sl.link);
             return;
         }
         List<Chapter> chapters = new ArrayList<>();
@@ -347,7 +347,7 @@ public class Crawler {
             }
         } catch (Exception e) {
             logger.error(TAG+ "请求失败" + e.toString());
-            callback.onError("请求失败");
+            callback.onError("解析失败");
         }
     }
 
@@ -372,6 +372,8 @@ public class Crawler {
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36")
             .validateTLSCertificates(false).get());
             String content = getNodeStr(jxDocument, config.content.xpath);
+            logger.info(TAG+  link+"   "+config.content.xpath);
+
             // 换行
             StringBuilder builder = new StringBuilder();
             String[] lines = content.split(" ");
