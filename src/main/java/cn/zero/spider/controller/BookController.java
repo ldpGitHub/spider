@@ -135,7 +135,6 @@ public class BookController extends BaseController {
         SearchBook searchBook = book.orElse(null);
         if(searchBook!=null){
             searchBook.setSelected(true);
-            searchBook.setTitle("我是姚成杰的爸爸");
             searchResultRepository.save(searchBook);
 
         }
