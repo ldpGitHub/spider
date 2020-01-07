@@ -1,68 +1,36 @@
 package cn.zero.spider.pojo;
 
+import lombok.Data;
+
 import java.io.Serializable;
 
 /**
  * @author 蔡元豪
  * @date 2018/6/23 19:52
  */
+@Data
 public class Article implements Serializable {
+
+    private static final long serialVersionUID = 6428186596698828991L;
+
     /**
      * 章节目录地址
      */
     private String url;
+
     /**
      * 小说详情地址
      */
-
     private String bookUrl;
+
     /**
      * 章节标题
      */
     private String title;
+
     /**
      * 内容
      */
     private String content;
 
-    public String getBookUrl() {
-        return bookUrl;
-    }
-
-    public void setBookUrl(String bookUrl) {
-        this.bookUrl = bookUrl;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    @Override
-    public String toString() {
-        return "Article{" +
-                "url=" + url +
-                ", title='" + title + '\'' +
-                ", content='" + content + '\'' +
-                '}';
-    }
 }

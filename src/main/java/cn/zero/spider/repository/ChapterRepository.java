@@ -1,6 +1,5 @@
 package cn.zero.spider.repository;
 
-import cn.zero.spider.crawler.entity.book.SearchBook;
 import cn.zero.spider.crawler.entity.chapter.Chapter;
 import org.springframework.data.jpa.repository.JpaRepository;
 

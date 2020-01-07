@@ -1,13 +1,15 @@
 package cn.zero.spider.crawler.entity.source;
 
+import lombok.ToString;
+
 /**
  * 默认配置
  * 可能有部分源，比较复杂，需要多个xpath，那就继承重写
  * <p>
  * Created by quezhongsang on 2018/1/7.
  */
+@ToString
 public class SourceConfig {
-
 
     public int id;
 
@@ -26,7 +28,7 @@ public class SourceConfig {
      */
     public Content content;
 
-    public SourceConfig(int  id) {
+    public SourceConfig(int id) {
         this.id = id;
     }
 
@@ -35,23 +37,12 @@ public class SourceConfig {
         return id;
     }
 
-    public void setId(int  id) {
+    public void setId(int id) {
         this.id = id;
     }
 
+    @ToString
     public static class Search {
-        @Override
-        public String toString() {
-            return "Search{" +
-                    "charset='" + charset + '\'' +
-                    ", xpath='" + xpath + '\'' +
-                    ", coverXpath='" + coverXpath + '\'' +
-                    ", titleXpath='" + titleXpath + '\'' +
-                    ", linkXpath='" + linkXpath + '\'' +
-                    ", authorXpath='" + authorXpath + '\'' +
-                    ", descXpath='" + descXpath + '\'' +
-                    '}';
-        }
 
         public String charset;
 
@@ -77,7 +68,6 @@ public class SourceConfig {
 
         public String lastChapterXpath;
 
-
     }
 
     public static class Catalog {
@@ -86,16 +76,6 @@ public class SourceConfig {
         public String titleXpath;
 
         public String linkXpath;
-    }
-
-    @Override
-    public String toString() {
-        return "SourceConfig{" +
-                "id=" + id +
-                ", search=" + search +
-                ", catalog=" + catalog +
-                ", content=" + content +
-                '}';
     }
 
     public static class Content {
