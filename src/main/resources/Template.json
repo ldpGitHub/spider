@@ -142,7 +142,7 @@
 
     },
     "catalog": {
-      "xpath": "//div[@id='main']//dl[@class='chapterlist']/dd/",
+      "xpath": "//div[@id=list]//dl//dd",
       "titleXpath": "/a/text()",
       "linkXpath": "/a/@href"
     },
@@ -354,6 +354,50 @@
     },
     "content": {
       "xpath": "//body/text()"
+    }
+  },
+
+  {
+    "id": 22,
+    "search": {
+      "charset": "UTF-8",
+      "xpath": "//div[@class ='novelslist2']/ul/li[position()>1]",
+      "coverXpath": "",
+      "titleXpath": "//span[2]/a/text()",
+      "linkXpath": "//span[2]/a/@href",
+      "authorXpath": "//span[4]/text()",
+      "descXpath": "",
+      "lastChapterXpath": "//span[3]/a/@href"
+    },
+    "catalog": {
+      "xpath": "//div[@id=list]//dl//dd",
+      "titleXpath": "//a/text()",
+      "linkXpath": "//a/@href"
+    },
+    "content": {
+      "xpath": "//div[@id='content']/text()"
+    }
+  },
+
+  {
+    "id": 23,
+    "search": {
+      "charset": "UTF-8",
+      "xpath": "//div[@class='result-item result-game-item']",
+      "coverXpath": "//div[@class='result-game-item-pic']//a//img/@src",
+      "titleXpath": "//div[@class='result-game-item-detail']//h3//a/@title",
+      "linkXpath": "//div[@class='result-game-item-detail']//h3//a/@href",
+      "authorXpath": "//div[@class='result-game-item-detail']//div[@class='result-game-item-info']//p[1]/span[2]/text()",
+      "descXpath": "//div[@class='result-game-item-detail']//p[@class='result-game-item-desc']/text()",
+      "lastChapterXpath": "//div[@class='result-game-item-detail']//div[@class='result-game-item-info']//p[4]//a/text()"
+    },
+    "catalog": {
+      "xpath": "//div[@id=list]//dl//dd",
+      "titleXpath": "//a/text()",
+      "linkXpath": "//a/@href"
+    },
+    "content": {
+      "xpath": "//div[@id='content']/text()"
     }
   }
 ]

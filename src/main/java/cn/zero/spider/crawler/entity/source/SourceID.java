@@ -26,7 +26,11 @@ public enum SourceID{
    SUIMENGXIAOSHUO(18),
        DAJIADUSHUYUAN(19),
        SHUQIBA(20),
-    XIAOSHUO52(21);
+    XIAOSHUO52(21),
+    XIAOSHUO98(22),
+    QIQIXIAOSHUO(23);
+
+
 
     public int getId() {
         return id;

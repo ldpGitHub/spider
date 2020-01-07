@@ -7,24 +7,33 @@ import cn.zero.spider.crawler.entity.content.Content;
 import cn.zero.spider.crawler.source.callback.ChapterCallback;
 import cn.zero.spider.crawler.source.callback.ContentCallback;
 import cn.zero.spider.crawler.source.callback.SearchCallback;
+import cn.zero.spider.pojo.ResponseData;
+import cn.zero.spider.pojo.User;
+import cn.zero.spider.pojo.UserBook;
 import cn.zero.spider.repository.ChapterRepository;
 import cn.zero.spider.repository.ContentRepository;
 import cn.zero.spider.repository.SearchResultRepository;
+import cn.zero.spider.repository.UserRepository;
+import cn.zero.spider.service.UserService;
 import cn.zero.utils.SimilarityCharacterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.Console;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 
 /**
@@ -44,7 +53,10 @@ public class BookController extends BaseController {
     private ChapterRepository chapterRepository;
     @Autowired
     private ContentRepository contentRepository;
-
+    @Autowired
+    private  UserService userService;
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * 搜索小说
@@ -114,7 +126,28 @@ public class BookController extends BaseController {
         return userResult;
     }
 
+    @PostMapping("/synBookShelf")
+    public ResponseData<User> synBookShelf(@RequestBody List<Long> ids) {
+        System.out.println(ids);
+        String username = (String)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User user = userService.getUserByUsername(username);
+        List<UserBook> userBooks = ids.stream().map(e -> new UserBook(null, user.getUserId(), e)).collect(Collectors.toList());
+        user.setUserBookList(userBooks);
+        userRepository.saveAndFlush(user);
+        System.out.println(username);
+        return new ResponseData<>(true,"同步书架成功",200,user);
+    }
 
+    @RequestMapping("/getBookShelf")
+    public List<UserBook>  getBookShelf() {
+        String username = (String)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User user = userService.getUserByUsername(username);
+        logger.info(user+"");
+        logger.info(user.getUserBookList()+"");
+
+        return   user.getUserBookList();
+
+    }
 
     /**
      * 搜索小说
@@ -141,7 +174,7 @@ public class BookController extends BaseController {
         return searchBook;
     }
 
-    @Scheduled(initialDelay=1000*5, fixedRate=1000*60*8)
+    //@Scheduled(initialDelay=1000*5, fixedRate=1000*60*7)
     private void checkUpdateSchedule() {
         List<SearchBook> currentBookList = searchResultRepository.findAll();
         for (SearchBook searchBook : currentBookList) {
@@ -156,11 +189,12 @@ public class BookController extends BaseController {
     private void checkBookResultSingle(SearchBook searchBook) {
         List<List<Chapter>>   chapterAllWebsite = new ArrayList<>();
         checkUpdateExecutorService.submit(() -> {
-            logger.info(searchBook.title);
+//            logger.info(searchBook.title);
             for (SearchBook.SL searchBookSL: searchBook.getSources() ) {
                 Crawler.catalog(searchBookSL, new ChapterCallback() {
                     @Override
                     public void onResponse(List<Chapter> chapters) {
+                        logger.info("onResponse:" + chapters.get(chapters.size() - 1).link + chapters.get(chapters.size() - 1).title + "\n");
                         for (Chapter chapter:chapters) {
                             chapter.setBookId(searchBook.getBookId());
                         }
@@ -168,15 +202,35 @@ public class BookController extends BaseController {
                     }
                     @Override
                     public void onError(String msg) {
-                    logger.error("爬取错误 书名" + searchBook.getTitle() +"     " +msg);
+                        logger.error("爬取错误 书名" + searchBook.getTitle() + "     " + msg + "\n");
                     }
                 });
             }
 //            logger.info("最好的列表:"+"书名 "+searchBook.getTitle()+"  最新章节  "+getBestChapterList(chapterAllWebsite).get(getBestChapterList(chapterAllWebsite).size()-1)+"");
-            List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite);
-            logger.info("最好的列表 原列表修正后:"+"书名 "+searchBook.getTitle()+"  最新章节  "+bestChapterList.get(bestChapterList.size() -1)+"");
 
-            searchBook.setLastChapter(bestChapterList.get(bestChapterList.size() - 1).getTitle()+"更新检测加上去的");
+
+//            Random random = new Random();
+//            for (int i = 0; i <=chapterAllWebsite.size()-1 ; i++) {
+//                if (i ==0){
+//                    List<Chapter> item0 =    chapterAllWebsite.get(0);
+//                    item0 =  item0.subList(0,item0.size() - 1 - 7);
+//                    chapterAllWebsite.set(0,item0);
+//                    logger.info(""+chapterAllWebsite.get(i).get(chapterAllWebsite.get(i).size() -1));
+//
+//                    continue;
+//                }
+//                List<Chapter> item = chapterAllWebsite.get(i);
+//                item = item.subList(0,item.size() -1- random.nextInt(i) - random.nextInt(chapterAllWebsite.size()));
+//                chapterAllWebsite.set(i,item);
+//
+//                logger.info(""+chapterAllWebsite.get(i).get(chapterAllWebsite.get(i).size() -1));
+//            }
+
+
+            List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite);
+            logger.info("最好的列表 原列表修正后:" + "书名 " + searchBook.getTitle() + "  最新章节  " + bestChapterList.get(bestChapterList.size() - 1) + " \r\n \r\n\n");
+
+            searchBook.setLastChapter(bestChapterList.get(bestChapterList.size() - 1).getTitle());
             for (int i = 0; i <=bestChapterList.size() - 1 ; i++) {
                 bestChapterList.get(i).setChapterIndex(i);
             }
@@ -187,8 +241,11 @@ public class BookController extends BaseController {
     }
 
     private  List<Chapter> baseChapterListModified(List<List<Chapter>> chapterAllWebsite) {
+
         List<Chapter> bestChapterList  =  getBestChapterList(chapterAllWebsite);
+//        logger.info("算出来的最好章节" + bestChapterList.get(bestChapterList.size() - 1));
         List<Chapter> oriChapterList = chapterAllWebsite.get(0);
+
         if(bestChapterList.size() < 100||bestChapterList.size() - oriChapterList.size()>100){
             return  bestChapterList;
         }else {
@@ -204,7 +261,7 @@ public class BookController extends BaseController {
                 }
             }
 
-            List<Chapter> extraChapters =  bestChapterList.subList(bestChapterList.size() -1 - index,bestChapterList.size() - 1);
+            List<Chapter> extraChapters = bestChapterList.subList(bestChapterList.size() - 1 - index, bestChapterList.size());
             if(extraChapters.size()> 0){
                 logger.info("多加的列表"+extraChapters.toString());
             }
@@ -223,32 +280,38 @@ public class BookController extends BaseController {
     }
 
     private List<Chapter> getBestChapterList(List<List<Chapter>> chapterAllWebsite) {
-        if (1 == chapterAllWebsite.size()) {
+        if (chapterAllWebsite.size() <= 1) {
             return chapterAllWebsite.get(0);
-        }
-        else  if(chapterAllWebsite.size()>2){
-            return getBetterChapterList(chapterAllWebsite.get(0),getBestChapterList(chapterAllWebsite.subList(1,chapterAllWebsite.size()-1))) ;
-        }else if (2 == chapterAllWebsite.size()){
-            List<Chapter> chapterListA = chapterAllWebsite.get(0);
-            List<Chapter> chapterListB = chapterAllWebsite.get(1);
-            return   getBetterChapterList(chapterListA,chapterListB);
-        }else {
-            return chapterAllWebsite.get(0);
+        } else {
+            return getBetterChapterList(chapterAllWebsite.get(0), getBestChapterList(chapterAllWebsite.subList(1, chapterAllWebsite.size())));
         }
     }
 
-  private List<Chapter> getBetterChapterList( List<Chapter> chapterListA , List<Chapter> chapterListB){
-        if(chapterListA.size()<chapterListB.size() - 30){
+    private List<Chapter> getBetterChapterList(List<Chapter> chapterListA, List<Chapter> chapterListB) {
+        logger.info("\n\r");
+
+        logger.info("" + chapterListA.get(chapterListA.size() - 1) + "      " + chapterListB.get(chapterListB.size() - 1));
+        logger.info("ASize:" + chapterListA.size() + "    " + "BSize:" + chapterListB.size());
+        if (chapterListA.size() < chapterListB.size() - 10) {
             return chapterListB;
+        } else if (chapterListB.size() < chapterListA.size() - 10) {
+            return chapterListA;
         }
-      List<Chapter> chapterListALast100 = chapterListA.subList(chapterListA.size()-1 - 100,chapterListA.size()-1);
-      List<Chapter> chapterListBLast100 = chapterListB.subList(chapterListB.size()-1 - 100,chapterListB.size()-1);
-      for (Chapter chapterA:chapterListALast100) {
+        if (chapterListA.get(chapterListA.size() - 1).getTitle().equals(chapterListB.get(chapterListB.size() - 1).getTitle())) {
+            return chapterListA;
+        }
+        List<Chapter> chapterListALast10 = chapterListA.subList(chapterListA.size() - 1 - 10, chapterListA.size());
+        List<Chapter> chapterListBLast100 = chapterListB.subList(chapterListB.size() - 1 - 100, chapterListB.size());
+        for (Chapter chapterA : chapterListALast10) {
           if (-1 == chapterListBLast100.indexOf(chapterA)){
+              logger.info("结果A" + chapterListA.get(chapterListA.size() - 1) + chapterA + "          " + chapterListBLast100 + "\n\r");
+
               return  chapterListA;
           }
       }
-      return  chapterListB;
+        logger.info("   结果B   " + chapterListB.get(chapterListB.size() - 1) + "\n\r");
+
+        return  chapterListB;
   }
 
     /**

@@ -155,10 +155,10 @@ public class Crawler {
             put(SourceID.BIQUGER.getId(), new Source(SourceID.BIQUGER.getId(), "笔趣阁2", "https://www.biquge.com.cn/search.php?keyword=%s"));
             put(SourceID.CHINESEZHUOBI.getId(), new Source(SourceID.CHINESEZHUOBI.getId(), "着笔中文网", "https://so.biqusoso.com/s.php?ie=gbk&siteid=zbzw.la&q=%s"));
             put(SourceID.DASHUBAO.getId(), new Source(SourceID.DASHUBAO.getId(), "笔趣阁3", "https://www.biduo.cc/search.php?keyword=%s"));
-            put(SourceID.CHINESEWUZHOU.getId(), new Source(SourceID.CHINESEWUZHOU.getId(), "梧州中文台", "http://www.gxwztv.com/search.htm?keyword=%s"));
+//            put(SourceID.CHINESEWUZHOU.getId(), new Source(SourceID.CHINESEWUZHOU.getId(), "梧州中文台", "http://www.gxwztv.com/search.htm?keyword=%s"));
             put(SourceID.UCSHUMENG.getId(), new Source(SourceID.UCSHUMENG.getId(), "UC书盟", "http://www.uctxt.com/modules/article/search.php?searchkey=%s", 4));
             put(SourceID.QUANXIAOSHUO.getId(), new Source(SourceID.QUANXIAOSHUO.getId(), "全小说", "http://qxs.la/s_%s"));
-            put(SourceID.YANMOXUAN.getId(), new Source(SourceID.YANMOXUAN.getId(), "衍墨轩", "http://www.ymoxuan.com/search.htm?keyword=%s"));
+//            put(SourceID.YANMOXUAN.getId(), new Source(SourceID.YANMOXUAN.getId(), "衍墨轩", "http://www.ymoxuan.com/search.htm?keyword=%s"));
             put(SourceID.AIQIWENXUE.getId(), new Source(SourceID.AIQIWENXUE.getId(), "爱奇文学", "http://m.i7wx.com/?m=book/search&keyword=%s"));
             put(SourceID.QIANQIANXIAOSHUO.getId(), new Source(SourceID.QIANQIANXIAOSHUO.getId(), "千千小说", "http://www.xqqxs.com/modules/article/search.php?searchkey=%s", 4));
             put(SourceID.PIAOTIANWENXUE.getId(), new Source(SourceID.PIAOTIANWENXUE.getId(), "飘天文学网", "http://www.piaotian.com/modules/article/search.php?searchtype=articlename&searchkey=%s"));
@@ -166,6 +166,10 @@ public class Crawler {
             put(SourceID.DAJIADUSHUYUAN.getId(), new Source(SourceID.DAJIADUSHUYUAN.getId(), "大家读书苑", "http://www.dajiadu.net/modules/article/searchab.php?searchkey=%s"));
             put(SourceID.SHUQIBA.getId(), new Source(SourceID.SHUQIBA.getId(), "书旗吧", "http://www.shuqiba.com/modules/article/search.php?searchkey=%s", 4));
             put(SourceID.XIAOSHUO52.getId(), new Source(SourceID.XIAOSHUO52.getId(), "小说52", "http://m.xs52.com/search.php?searchkey=%s"));
+            put(SourceID.XIAOSHUO98.getId(), new Source(SourceID.XIAOSHUO98.getId(), "小说98", "https://www.xs98.com/SearchBook.aspx?keyword=%s"));
+            put(SourceID.QIQIXIAOSHUO.getId(), new Source(SourceID.QIQIXIAOSHUO.getId(), "奇奇小说", "https://www.qq717.com/search.php?keyword=%s"));
+
+
         }
     };
 
@@ -283,7 +287,7 @@ public class Crawler {
 
     public static void catalog(SearchBook.SL sl, ChapterCallback callback) {
         if (sl == null || sl.source == null || TextUtils.isEmpty(sl.link)) {
-            callback.onError("");
+            callback.onError("sl == null || sl.source == null || TextUtils.isEmpty(sl.link)");
             return;
         }
         int sourceId = sl.source.id;
@@ -328,7 +332,7 @@ public class Crawler {
             logger.error(TAG+ "desc catalog =" +e.toString() +"   ");
         }
         if (rs == null || rs.isEmpty()) {
-            callback.onError("返回资源为空 请求失败"  + "    "+sl.link);
+            callback.onError("返回资源为空 请求失败"  + "    "+sl.link + "    SlID: "+sl.source.id +"    "+config.catalog.xpath);
             return;
         }
         List<Chapter> chapters = new ArrayList<>();
@@ -346,7 +350,7 @@ public class Crawler {
                 callback.onResponse(chapters);
             }
         } catch (Exception e) {
-            logger.error(TAG+ "请求失败" + e.toString());
+            logger.error(TAG+ "请求失败" + e.toString() + sl.link);
             callback.onError("解析失败");
         }
     }
