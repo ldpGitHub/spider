@@ -1,6 +1,6 @@
 package cn.zero.spider.crawler.entity.source;
 
-import lombok.ToString;
+import lombok.Data;
 
 /**
  * 默认配置
@@ -8,77 +8,67 @@ import lombok.ToString;
  * <p>
  * Created by quezhongsang on 2018/1/7.
  */
-@ToString
+@Data
 public class SourceConfig {
 
-    public int id;
+    private int id;
+
+    private String name;
+
+    private String searchURL;
+
+    private int minKeywords;
+
+    private boolean enable;
 
     /**
      * 搜索
      */
-    public Search search;
+    private Search search;
 
     /**
      * 小说目录内容
      */
-    public Catalog catalog;
+    private Catalog catalog;
 
     /**
      * 小说内容
      */
-    public Content content;
+    private Content content;
 
-    public SourceConfig(int id) {
-        this.id = id;
-    }
-
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    @ToString
+    @Data
     public static class Search {
 
-        public String charset;
+        private String charset;
 
-        public String xpath;
+        private String xpath;
 
-        public String coverXpath;
+        private String coverXpath;
 
-        public String titleXpath;
+        private String titleXpath;
 
-        public String getLastChapterXpath() {
-            return lastChapterXpath;
-        }
+        private String linkXpath;
 
-        public void setLastChapterXpath(String lastChapterXpath) {
-            this.lastChapterXpath = lastChapterXpath;
-        }
+        private String authorXpath;
 
-        public String linkXpath;
+        private String descXpath;
 
-        public String authorXpath;
-
-        public String descXpath;
-
-        public String lastChapterXpath;
+        private String lastChapterXpath;
 
     }
 
+    @Data
     public static class Catalog {
-        public String xpath;
+        private String xpath;
 
-        public String titleXpath;
+        private String titleXpath;
 
-        public String linkXpath;
+        private String linkXpath;
     }
 
+    @Data
     public static class Content {
-        public String xpath;
+        private String xpath;
     }
+
 }

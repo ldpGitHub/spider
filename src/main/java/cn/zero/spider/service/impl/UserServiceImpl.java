@@ -17,8 +17,10 @@ public class UserServiceImpl implements UserDetailsService, UserService {
 
     @Autowired
     private PasswordEncoder encoder;
+
     @Autowired
     private UserRepository userRepository;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = this.getUserByUsername(username);
@@ -44,5 +46,8 @@ public class UserServiceImpl implements UserDetailsService, UserService {
         return null;
     }
 
-
+    @Override
+    public User save(User user) {
+        return userRepository.saveAndFlush(user);
+    }
 }

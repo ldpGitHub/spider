@@ -3,6 +3,7 @@ package cn.zero.spider.controller;
 import cn.zero.spider.pojo.NovelsList;
 import cn.zero.spider.webmagic.page.BiQuGeIndexPageProcessor;
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +18,10 @@ import us.codecraft.webmagic.scheduler.RedisScheduler;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 首页 controller.
@@ -57,8 +61,9 @@ public class IndexController extends BaseController {
     public ModelAndView index() {
         ModelAndView modelAndView = new ModelAndView();
         BoundHashOperations<String, String, String> boundHashOperations = stringRedisTemplate.boundHashOps("novelsList");
-        List<NovelsList> novelsLists = new ArrayList<>(6);
-        boundHashOperations.entries().forEach((k, v) -> novelsLists.add(JSON.parseObject(v, NovelsList.class)));
+        Map<String, String> res = boundHashOperations.entries();
+        List<NovelsList> novelsLists = res == null ? Collections.emptyList() : res.values()
+                .stream().map(v -> JSON.parseObject(v, NovelsList.class)).collect(Collectors.toList());
         modelAndView.addObject("novelsLists", novelsLists);
         modelAndView.setViewName("index");
         return modelAndView;

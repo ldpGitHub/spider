@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
-import org.springframework.stereotype.Component;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -21,7 +19,6 @@ import java.io.IOException;
  * @describe 默认登录成功处理器实现
  **/
 @Slf4j
-@Component
 @AllArgsConstructor
 public class NovelAuthenticationSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 

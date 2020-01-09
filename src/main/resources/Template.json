@@ -2,6 +2,10 @@
 
   {
     "id": 1,
+    "name": "八一中文网",
+    "searchURL": "https://www.zwdu.com/search.php?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -23,6 +27,10 @@
   },
   {
     "id": 2,
+    "name": "猎文网",
+    "minKeywords": 1,
+    "searchURL": "https://www.liewen.cc/search.php?keyword=%s",
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -45,6 +53,10 @@
 
   {
     "id": 3,
+    "name": "追书网",
+    "searchURL": "https://www.mangg.net/search.aspx?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -66,6 +78,10 @@
   },
   {
     "id": 4,
+    "name": "新笔趣阁",
+    "searchURL": "https://www.xbiquge6.com/search.php?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -88,6 +104,10 @@
   },
   {
     "id": 5,
+    "name": "文学迷",
+    "searchURL": "http://www.wenxuemi.com/search.php?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -110,6 +130,10 @@
   },
   {
     "id": 6,
+    "name": "小说中文网",
+    "searchURL": "https://so.biqusoso.com/s.php?ie=utf-8&siteid=xszww.com&q=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='bookbox']",
@@ -130,6 +154,10 @@
   },
   {
     "id": 7,
+    "name": "顶点小说",
+    "searchURL": "https://www.booktxt.com/search.php?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -152,6 +180,10 @@
   },
   {
     "id": 8,
+    "name": "笔趣阁2",
+    "searchURL": "https://www.biquge.com.cn/search.php?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -174,6 +206,10 @@
   },
   {
     "id": 9,
+    "name": "着笔中文网",
+    "searchURL": "https://so.biqusoso.com/s.php?ie=gbk&siteid=zbzw.la&q=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='bookbox']",
@@ -194,6 +230,10 @@
   },
   {
     "id": 10,
+    "name": "笔趣阁3",
+    "searchURL": "https://www.biduo.cc/search.php?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -216,6 +256,10 @@
   },
   {
     "id": 11,
+    "name": "梧州中文台",
+    "searchURL": "http://www.gxwztv.com/search.htm?keyword=%s",
+    "minKeywords": 1,
+    "enable": false,
     "search": {
       "charset": "UTF-8",
       "xpath": "//*[@id='novel-list']/ul/li[position()>1]",
@@ -236,6 +280,10 @@
   },
   {
     "id": 12,
+    "name": "UC书盟",
+    "searchURL": "http://www.uctxt.com/modules/article/search.php?searchkey=%s",
+    "minKeywords": 4,
+    "enable": true,
     "search": {
       "charset": "GB2312",
       "xpath": "//div[@class='list-lastupdate']/ul/li",
@@ -256,6 +304,10 @@
   },
   {
     "id": 13,
+    "name": "全小说",
+    "searchURL": "http://qxs.la/s_%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "",
       "xpath": "//ul[@class='list_content']",
@@ -276,6 +328,10 @@
   },
   {
     "id": 14,
+    "name": "衍墨轩",
+    "searchURL": "http://www.ymoxuan.com/search.htm?keyword=%s",
+    "minKeywords": 1,
+    "enable": false,
     "search": {
       "charset": "UTF-8",
       "xpath": "//section[@class='lastest']/ul/li[position()>1]",
@@ -296,6 +352,10 @@
   },
   {
     "id": 15,
+    "name": "爱奇文学",
+    "searchURL": "http://m.i7wx.com/?m=book/search&keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "/html/body/a",
@@ -316,6 +376,10 @@
   },
   {
     "id": 16,
+    "name": "千千小说",
+    "searchURL": "http://www.xqqxs.com/modules/article/search.php?searchkey=%s",
+    "minKeywords": 4,
+    "enable": true,
     "search": {
       "charset": "GB2312",
       "xpath": "//*[@id='content']/div[@class='c_row']",
@@ -338,6 +402,10 @@
   },
   {
     "id": 17,
+    "name": "飘天文学网",
+    "searchURL": "http://www.piaotian.com/modules/article/search.php?searchtype=articlename&searchkey=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "GB2312",
       "xpath": "//*[@id='content']/table/tbody/tr[position() > 1]",
@@ -359,6 +427,10 @@
 
   {
     "id": 22,
+    "name": "小说98",
+    "searchURL": "https://www.xs98.com/SearchBook.aspx?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class ='novelslist2']/ul/li[position()>1]",
@@ -381,6 +453,10 @@
 
   {
     "id": 23,
+    "name": "奇奇小说",
+    "searchURL": "https://www.qq717.com/search.php?keyword=%s",
+    "minKeywords": 1,
+    "enable": true,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",

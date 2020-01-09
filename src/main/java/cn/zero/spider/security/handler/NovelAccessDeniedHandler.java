@@ -8,8 +8,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.stereotype.Component;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -21,7 +19,6 @@ import java.io.IOException;
  * @describe 默认的的权限不足处理器实现
  **/
 @Slf4j
-@Component
 @AllArgsConstructor
 public class NovelAccessDeniedHandler implements AccessDeniedHandler {
 

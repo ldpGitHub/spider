@@ -1,0 +1,39 @@
+server:
+  port: 80
+spring:
+  thymeleaf: # 页面模板
+    cache: false
+  resources:
+    static-locations: file:${upload.root.path},classpath:static/
+  datasource: # 数据源配置
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/spider?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai #jdbc:mysql://47.98.166.103:3306/spider?useUnicode=true&characterEncoding=utf-8
+    username: root
+    password: 12345a
+    type: com.alibaba.druid.pool.DruidDataSource
+  jpa:
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      ddl-auto: update
+    database: mysql
+    show-sql: false
+    properties.hibernate.dialect: org.hibernate.dialect.MySQL5Dialect
+  redis: # Redis
+    timeout: 40s # 连接超时时间
+    jedis:
+      pool:
+        min-idle: 10 #连接池中的最小空闲连接，默认值是0。
+        max-idle: 50 # 连接池中的最大空闲连接，默认值是8。
+        max-active: 2000 # 如果赋值为-1，则表示不限制；如果pool已经分配了maxActive个jedis实例，则此时pool的状态为exhausted(耗尽)。
+        max-wait: 1000ms # 等待可用连接的最大时间，单位毫秒，默认值为-1，表示永不超时。如果超过等待时间，则直接抛出JedisConnectionException
+upload:
+  root:
+    path: D:\\upload\\
+
+mybatis: #公共配置与profiles选择无关 mapperLocations指的路径是src/main/resources
+  type-aliases-package: cn.zero.spider.pojo
+  mapper-locations: classpath:cn/zero/spider/dao/*.xml
+
+logging:
+  level.cn.zero.spider: debug
