@@ -1,8 +1,6 @@
 server:
   port: 80
 spring:
-  thymeleaf: # 页面模板
-    cache: false
   resources:
     static-locations: file:${upload.root.path},classpath:static/
   datasource: # 数据源配置

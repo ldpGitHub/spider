@@ -50,7 +50,7 @@ public class JXDocument {
         return res;
     }
 
-    public List<JXNode> selN(String xpath) throws XpathSyntaxErrorException {
+    public List<JXNode> selN(String xpath) {
         try {
             return xpathEva.xpathParser(xpath, elements);
         } catch (Exception e) {
@@ -58,7 +58,8 @@ public class JXDocument {
             if (e instanceof NoSuchAxisException || e instanceof NoSuchFunctionException) {
                 msg = e.getMessage();
             }
-            throw new XpathSyntaxErrorException(msg);
+            //throw new XpathSyntaxErrorException(msg);
+            return null;
         }
     }
 
