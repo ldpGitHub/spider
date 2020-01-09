@@ -24,13 +24,19 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.lang.NonNull;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.ParallelFlux;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.URLEncoder;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 /**
  * 爬虫
@@ -68,7 +74,7 @@ public class Crawler {
             for (SourceConfig config : list) {
                 CONFIGS.put(config.getId(), config);
             }
-            log.info("数据源配置:  {}", CONFIGS);
+            // log.info("数据源配置:  {}", CONFIGS);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -123,6 +129,12 @@ public class Crawler {
     }*/
     private static int count = 2;
 
+    /**
+     * 获取网址中的内容
+     * @param bookName
+     * @param source
+     * @return
+     */
     private static JXDocument connect(String bookName, SourceConfig source) {
         String url = source.getSearchURL();
         try {
@@ -133,7 +145,6 @@ public class Crawler {
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36")
                     .validateTLSCertificates(false).get());
         } catch (IOException e) {
-            //log.error(e.getMessage(), e);
             log.error("连接异常: {} , 剩余重试次数 {} , 信息：{}", url, count, e.getMessage());
             //return count <= 0 ? null : this.connect(template, url, --count);
             return null;
@@ -149,35 +160,45 @@ public class Crawler {
     private static Flux<SearchBook> getSearchBook(String keyword, SourceConfig source) {
         //log.info("数据源 Source: " + source);
         //log.info("开始爬取书籍，keyword：{}, url: {}", keyword, source.getSearchURL());
-        return Mono.fromCallable(() ->
+        return Mono.fromFuture(CompletableFuture.supplyAsync(() ->
+            connect(keyword, source)
+        )).flatMapMany(document ->
+             document == null ? Mono.empty() : Flux.fromStream(
+                    document.selN(source.getSearch().getXpath())
+                            .stream().map(node -> createdSearchBook(node, source))
+            )
+        );
+        /*return Mono.fromCallable(() ->
                 connect(keyword, source)
         ).flatMapMany(document ->
                 // 爬取到文档后进行解析
                 document == null ? Mono.empty() : Flux.fromStream(
-                        document.selN(source.getSearch().getXpath()).stream().map(node -> created(node, source))
+                        document.selN(source.getSearch().getXpath())
+                                .stream().map(node -> createdSearchBook(node, source))
                 )
-        );
+        );*/
+
     }
 
+    /**
+     * 并行搜索所有启用的书源
+     * @param bookName 想要搜索的书籍的书名
+     * @return 书籍搜索模型，一旦搜索到就会返回
+     */
     public static Flux<SearchBook> search(@NonNull String bookName) {
-        return Flux.fromIterable(CONFIGS.values()).filter(SourceConfig::isEnable).concatMap(source ->
-            getSearchBook(bookName, source)
-        );
+        return Flux.fromIterable(CONFIGS.values()).filter(SourceConfig::isEnable).parallel().concatMap(source ->
+                getSearchBook(bookName, source)
+        ).sequential();
     }
 
-    public static SearchBook created(JXNode jxNode, SourceConfig source) {
+    public static SearchBook createdSearchBook(JXNode jxNode, SourceConfig source) {
         SourceConfig.Search search = source.getSearch();
         SearchBook book = new SearchBook();
         book.setCover(urlVerification(getNodeStr(jxNode, search.getCoverXpath()), source.getSearchURL())); //封面
         book.setTitle(getNodeStr(jxNode, search.getTitleXpath())); //书名
         int id = source.getId();
-        String link = "";
-        if (source.getId() == SourceID.YANMOXUAN.getId()) {
-            link = getNodeStr(jxNode, search.getLinkXpath());
-            link = "https://" + link.substring(2);
-        } else {
-            link = urlVerification(getNodeStr(jxNode, search.getLinkXpath()), source.getSearchURL());
-        }
+        String link = urlVerification(getNodeStr(jxNode, search.getLinkXpath()), source.getSearchURL());
+        log.info("名称：{}， 网址：{}", source.getName() + " : " + source.getSearchURL(), link);
 
         if (source.getId() == SourceID.CHINESEWUZHOU.getId() ||
                 source.getId() == SourceID.QIANQIANXIAOSHUO.getId() ||
@@ -457,8 +478,16 @@ public class Crawler {
     }
 
     private static String urlVerification(String link, String linkWithHost) {
-        if (TextUtils.isEmpty(link)) {
+        if (StringUtils.isBlank(link)) {
             return link;
+        }
+        try {
+            if (link.startsWith("/")) {
+                URI original = new URI(linkWithHost);
+                //original.getHost()
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         try {
             if (link.startsWith("/")) {
@@ -479,15 +508,71 @@ public class Crawler {
         }
     }
 
-    public static void main(String [] args) {
+    public static void main(String [] args) throws Exception {
+        String link = "/182377/";
+        String linkWithHost = "http://qxs.la/s_";
+        if (!link.startsWith("http")) {
+            URL url = new URL(linkWithHost);
+            if (link.startsWith("//")) {
+                System.out.println(url.getProtocol() + ":"+ url.getHost() + link);
+            } else if (link.startsWith("/")) {
+                System.out.println(url.getProtocol() + "://"+ url.getHost() + link);
+            }
+        } else {
+            System.out.println(link);
+        }
+        URI url = new URI(link);
+        System.out.println(url.getHost());
+        System.out.println(url.getPath());
+        System.out.println(urlVerification(link, linkWithHost));
+        Random random = new Random();
+        /*List<String> list = new ArrayList<>(Arrays.asList("1", "2", "3", "4", "5", "6", "7"));
+        Flux.fromIterable(list).parallel().concatMap(e -> {
+            return Mono.fromFuture(CompletableFuture.supplyAsync(() -> {
+                try {
+                   // Thread.sleep(random.nextInt(100) * 30);
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+                return e ;
+            }));
+
+        }).sequential().subscribe(System.out::println);*/
+
+       // search("逆天邪神").distinct(SearchBook::getBookId).subscribe(System.out::println);
+
+        try {
+            Thread.sleep(200000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         //search("逆天邪神").distinct().subscribe(System.out::println);
-        search("逆天邪神").groupBy(SearchBook::getBookId).distinct().subscribe(e-> {
-            System.out.println(e.key());
-            e.index().flatMap(b -> {
-                return Mono.just(b.getT2());
-            }).subscribe(c -> {
-                System.out.println(c);
-            });
-        });
+
+        //search("逆天邪神").distinct(SearchBook::getBookId).subscribe();
+        //Thread.sleep(10000);
+        /*CompletableFuture completableFuture = new CompletableFuture<>();
+
+        Mono.fromFuture(CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return "233";
+        })).subscribe(System.out::println);
+
+
+        CompletableFuture completableFuture2 = new CompletableFuture<>();
+
+        Mono.fromFuture(CompletableFuture.supplyAsync(() -> {
+            return "123";
+        })).subscribe(System.out::println);
+        */
+        //completableFuture.complete("21321");
+        //completableFuture2.complete("666");
+      //  System.out.println(completableFuture2.get());
+      //  System.out.println(completableFuture.get());
+
     }
 }

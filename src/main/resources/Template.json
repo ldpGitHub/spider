@@ -107,7 +107,7 @@
     "name": "文学迷",
     "searchURL": "http://www.wenxuemi.com/search.php?keyword=%s",
     "minKeywords": 1,
-    "enable": true,
+    "enable": false,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='result-item result-game-item']",
@@ -209,7 +209,7 @@
     "name": "着笔中文网",
     "searchURL": "https://so.biqusoso.com/s.php?ie=gbk&siteid=zbzw.la&q=%s",
     "minKeywords": 1,
-    "enable": true,
+    "enable": false,
     "search": {
       "charset": "UTF-8",
       "xpath": "//div[@class='bookbox']",
@@ -283,7 +283,7 @@
     "name": "UC书盟",
     "searchURL": "http://www.uctxt.com/modules/article/search.php?searchkey=%s",
     "minKeywords": 4,
-    "enable": true,
+    "enable": false,
     "search": {
       "charset": "GB2312",
       "xpath": "//div[@class='list-lastupdate']/ul/li",
