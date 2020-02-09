@@ -53,8 +53,20 @@ public class User implements UserDetails {
         this.password = password;
     }
 
+
     @JsonIgnore
     private String password;
+
+    @JsonIgnore
+    private String mobileToken;
+
+    public String getMobileToken() {
+        return mobileToken;
+    }
+
+    public void setMobileToken(String mobileToken) {
+        this.mobileToken = mobileToken;
+    }
 
     @JsonIgnore
     @Override

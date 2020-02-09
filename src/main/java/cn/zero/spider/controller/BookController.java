@@ -7,20 +7,25 @@ import cn.zero.spider.crawler.entity.content.Content;
 import cn.zero.spider.crawler.source.callback.ChapterCallback;
 import cn.zero.spider.crawler.source.callback.ContentCallback;
 import cn.zero.spider.crawler.source.callback.SearchCallback;
-import cn.zero.spider.pojo.ResponseData;
-import cn.zero.spider.pojo.User;
-import cn.zero.spider.pojo.UserBook;
+import cn.zero.spider.pojo.*;
+import cn.zero.spider.push.ApiException;
+import cn.zero.spider.push.PushClient;
 import cn.zero.spider.repository.ChapterRepository;
 import cn.zero.spider.repository.ContentRepository;
 import cn.zero.spider.repository.SearchResultRepository;
 import cn.zero.spider.repository.UserRepository;
 import cn.zero.spider.service.UserService;
-import cn.zero.utils.SimilarityCharacterUtils;
+import cn.zero.utils.*;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.google.gson.Gson;
+import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,11 +33,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
@@ -121,7 +126,6 @@ public class BookController extends BaseController {
 //        data.put("message","成功");
 //        data.put("res",new Gson().toJson(userResult) );
 //        modelAndView.addAllObjects(data);
-
         searchResultRepository.saveAll(userResult);
         return userResult;
     }
@@ -138,16 +142,45 @@ public class BookController extends BaseController {
         return new ResponseData<>(true,"同步书架成功",200,user);
     }
 
+    @PostMapping("/synBookShelfByMobile")
+    public ResponseData<User> synBookShelfByMobile(@RequestBody DirectSycBookShelfBean directSycBookShelfBean) {
+        List<Long> ids = directSycBookShelfBean.getBookIds();
+        System.out.println(ids);
+        User user = userService.getUserByUsername(directSycBookShelfBean.getMobile());
+        if(!directSycBookShelfBean.getMobileToken().equals(user.getMobileToken())){
+            return new ResponseData<>(true,"同步书架失败,运营商token失效",500,user);
+        }
+        List<UserBook> userBooks = ids.stream().map(e -> new UserBook(null, user.getUserId(), e)).collect(Collectors.toList());
+        user.setUserBookList(userBooks);
+        userRepository.saveAndFlush(user);
+//        System.out.println(username);
+        return new ResponseData<>(true,"同步书架成功",200,user);
+    }
+
     @RequestMapping("/getBookShelf")
     public List<UserBook>  getBookShelf() {
         String username = (String)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User user = userService.getUserByUsername(username);
-        logger.info(user+"");
-        logger.info(user.getUserBookList()+"");
-
-        return   user.getUserBookList();
-
+        logger.info(user + "");
+        logger.info(user.getUserBookList() + "");
+        return user.getUserBookList();
     }
+
+    @RequestMapping("/getBookShelfByMobile")
+    public List<UserBook> getBookShelfByMobile(HttpServletRequest request) throws Exception{
+        String mobile = request.getParameter("mobile");
+        String mobileToken = request.getParameter("mobileToken");
+
+        User user = userService.getUserByUsername(mobile);
+        if(!mobileToken.equals(user.getMobileToken())){
+           throw  new Exception("运营商token失效");
+        }
+
+        logger.info(user + "");
+        logger.info(user.getUserBookList() + "");
+        return   user.getUserBookList();
+    }
+
 
     /**
      * 搜索小说
@@ -174,14 +207,20 @@ public class BookController extends BaseController {
         return searchBook;
     }
 
-    //@Scheduled(initialDelay=1000*5, fixedRate=1000*60*7)
+    @Scheduled(initialDelay=1000*5, fixedRate=1000*60*7)
     private void checkUpdateSchedule() {
+        PushClient pushClient = new PushClient();
+        try {
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            pushClient.createPushDefaultNotify(System.currentTimeMillis()+"" ,"开始检查更新了"+simpleDateFormat.format(new Date()));
+        } catch (ApiException e) {
+            e.printStackTrace();
+        }
         List<SearchBook> currentBookList = searchResultRepository.findAll();
         for (SearchBook searchBook : currentBookList) {
             if(!searchBook.isSelected()){
                 continue;
             }
-
             checkBookResultSingle(searchBook);
         }
     }
@@ -229,13 +268,31 @@ public class BookController extends BaseController {
 
             List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite);
             logger.info("最好的列表 原列表修正后:" + "书名 " + searchBook.getTitle() + "  最新章节  " + bestChapterList.get(bestChapterList.size() - 1) + " \r\n \r\n\n");
+            String bestChapter = bestChapterList.get(bestChapterList.size() - 1).getTitle();
+            if(!searchBook.getLastChapter().equals(bestChapter)){
+                searchBook.setLastChapter(bestChapterList.get(bestChapterList.size() - 1).getTitle());
+                PushClient pushClient = new PushClient();
+                try {
+                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title,searchBook.getLastChapter());
+                } catch (ApiException e) {
+                    e.printStackTrace();
+                }
+            }
 
-            searchBook.setLastChapter(bestChapterList.get(bestChapterList.size() - 1).getTitle());
             for (int i = 0; i <=bestChapterList.size() - 1 ; i++) {
                 bestChapterList.get(i).setChapterIndex(i);
             }
             searchResultRepository.save(searchBook);
             chapterRepository.saveAll(bestChapterList);
+
+//                PushWork pushWork = new PushWork();
+//                pushWork.setContent(searchBook.getLastChapter());
+//                pushWork.setAndroidTitle(searchBook.getTitle());
+//                pushWork.setTarget(1);
+//                pushWork.setAppkey(MobPushConfig.appkey);
+//                pushWork.setType(1);
+//                pushWork.setPlats(new Integer[1]);
+//                pushClient.sendPush(pushWork);
 
         });
     }
@@ -415,4 +472,64 @@ public class BookController extends BaseController {
         return contentResponse;
     }
 
+
+
+    private static String appkey = "";
+    private static String appSecret = "";
+    private static String token = "";
+    private static String opToken = "opToken";
+    private static String operator = "CMCC";
+
+    @RequestMapping("/directLogin")
+    public JSONObject directLogin(HttpServletRequest uerRequest) throws Exception {
+        appkey = uerRequest.getParameter("appkey");
+        appSecret = uerRequest.getParameter("appSecret");
+        token = uerRequest.getParameter("token");
+        opToken = uerRequest.getParameter("opToken");
+        operator = uerRequest.getParameter("operator");
+        String authHost = "http://identify.verify.mob.com/";
+        String url = authHost + "auth/auth/sdkClientFreeLogin";
+        HashMap<String, Object> request = new HashMap<>();
+        request.put("appkey", appkey);
+        request.put("token", token);
+        request.put("opToken", opToken);
+        request.put("operator", operator);
+        request.put("timestamp", System.currentTimeMillis());
+        request.put("sign", SignUtil.getSign(request, appSecret));
+        String response = postRequestNoSecurity(url, null, request);
+        JSONObject jsonObject = JSONObject.parseObject(response);
+        if (200 == jsonObject.getInteger("status")) {
+            String res = jsonObject.getString("res");
+            byte[] decode = DES.decode(Base64Utils.decode(res.getBytes()), appSecret.getBytes());
+            ResBean resBean = new Gson().fromJson(new String(decode),ResBean.class);
+            resBean.setMobileToken(token);
+//            jsonObject.put("res", JSONObject.parseObject(new String(decode)));
+            jsonObject.put("res", resBean);
+            userService.saveUserDirect(resBean.getPhone(),resBean.getMobileToken());
+        }
+        System.out.println(jsonObject);
+        return jsonObject;
+    }
+
+
+    public static String postRequestNoSecurity(String url, Map<String, String> headers, Object data) throws Exception {
+        String securityReq = JSON.toJSONString(data);
+        OkHttpClient okHttpClient = new OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build();
+        okhttp3.RequestBody body =okhttp3.RequestBody.create(MediaType.parse("application/json"), securityReq);
+        Request.Builder builder = new Request.Builder();
+        if (!BaseUtils.isEmpty(headers)) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                builder.addHeader(entry.getKey(), entry.getValue());
+            }
+        }
+        final Request request = builder.addHeader("Content-Length", String.valueOf(securityReq.length()))
+                .url(url)
+                .post(body)
+                .build();
+        Call call = okHttpClient.newCall(request);
+        Response response = call.execute();
+
+        String securityRes = response.body().string();
+        return securityRes;
+    }
 }

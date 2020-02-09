@@ -44,5 +44,18 @@ public class UserServiceImpl implements UserDetailsService, UserService {
         return null;
     }
 
+    @Override
+    public User saveUserDirect(String username, String mobileToken) {
+        User user = userRepository.findUserByUsername(username);
+        if (user == null) {
+            User newUser = new User();
+            newUser.setUsername(username);
+            newUser.setMobileToken(mobileToken);
+            return userRepository.saveAndFlush(newUser);
+        }else {
+            user.setMobileToken(mobileToken);
+            return userRepository.saveAndFlush(user);
+        }
+    }
 
 }

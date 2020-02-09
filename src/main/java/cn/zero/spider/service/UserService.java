@@ -7,4 +7,8 @@ public interface UserService {
     User getUserByUsername(String username);
 
     User saveUser(String username, String password);
+
+    User saveUserDirect(String username, String mobileToken);
+
+
 }

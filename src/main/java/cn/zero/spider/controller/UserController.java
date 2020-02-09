@@ -21,7 +21,6 @@ public class UserController {
 
     @PostMapping(path = "/reg")
     public ResponseData<User> reg(String username, String password, HttpServletResponse response) throws Exception {
-
         User user = userService.saveUser(username, password);
         if (user == null) {
             return new ResponseData<>(false, "用户名已被注册", 200, user);
