@@ -8,7 +8,7 @@ public interface UserService {
 
     User saveUser(String username, String password);
 
-    User saveUserDirect(String username, String mobileToken);
+    User saveUserDirect(String username, String mobileToken,String registrationId);
 
 
 }

@@ -3,8 +3,6 @@ package cn.zero.spider.pojo;
 import java.util.List;
 
 /**
- * Created by ldp on 17-5-3.
- * 排行榜的书籍 (不被公用的直接作为内部类)
  */
 
 public class DirectSycBookShelfBean {

@@ -9,17 +9,21 @@ import cn.zero.spider.crawler.source.callback.ContentCallback;
 import cn.zero.spider.crawler.source.callback.SearchCallback;
 import cn.zero.spider.pojo.*;
 import cn.zero.spider.push.ApiException;
+import cn.zero.spider.push.MobPushConfig;
 import cn.zero.spider.push.PushClient;
-import cn.zero.spider.repository.ChapterRepository;
-import cn.zero.spider.repository.ContentRepository;
-import cn.zero.spider.repository.SearchResultRepository;
-import cn.zero.spider.repository.UserRepository;
+import cn.zero.spider.push.PushWork;
+import cn.zero.spider.push.utils.AndroidNotifyStyleEnum;
+import cn.zero.spider.push.utils.PlatEnum;
+import cn.zero.spider.push.utils.PushTypeEnum;
+import cn.zero.spider.push.utils.TargetEnum;
+import cn.zero.spider.repository.*;
 import cn.zero.spider.service.UserService;
 import cn.zero.utils.*;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.gson.Gson;
 import okhttp3.*;
+import org.apache.http.util.TextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,7 +66,8 @@ public class BookController extends BaseController {
     private  UserService userService;
     @Autowired
     private UserRepository userRepository;
-
+    @Autowired
+    private UserBookRepository userBookRepository;
     /**
      * 搜索小说
      *
@@ -150,8 +155,17 @@ public class BookController extends BaseController {
         if(!directSycBookShelfBean.getMobileToken().equals(user.getMobileToken())){
             return new ResponseData<>(true,"同步书架失败,运营商token失效",500,user);
         }
+        user.getUserBookList().clear();
+
+        userBookRepository.deleteUserBooksByUserId(user.getUserId());
+        userBookRepository.deleteAllByBookId(user.getUserId());
+        userRepository.saveAndFlush(user);
+
+      logger.error("userId: "+user.getUserId());
         List<UserBook> userBooks = ids.stream().map(e -> new UserBook(null, user.getUserId(), e)).collect(Collectors.toList());
-        user.setUserBookList(userBooks);
+//        user.setUserBookList(userBooks);
+        user.getUserBookList().addAll(userBooks);
+
         userRepository.saveAndFlush(user);
 //        System.out.println(username);
         return new ResponseData<>(true,"同步书架成功",200,user);
@@ -201,21 +215,26 @@ public class BookController extends BaseController {
         SearchBook searchBook = book.orElse(null);
         if(searchBook!=null){
             searchBook.setSelected(true);
+            if(0 == searchBook.getUpdateTime()){
+                searchBook.setUpdateTime(System.currentTimeMillis());
+            }
             searchResultRepository.save(searchBook);
 
         }
         return searchBook;
     }
 
-    @Scheduled(initialDelay=1000*5, fixedRate=1000*60*7)
+    @Scheduled(initialDelay=1000*5, fixedRate=1000*60*10)
     private void checkUpdateSchedule() {
         PushClient pushClient = new PushClient();
-        try {
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            pushClient.createPushDefaultNotify(System.currentTimeMillis()+"" ,"开始检查更新了"+simpleDateFormat.format(new Date()));
-        } catch (ApiException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//            pushClient.createPushDefaultNotify(System.currentTimeMillis()+"" ,"开始检查更新了"+simpleDateFormat.format(new Date()));
+//        } catch (ApiException e) {
+//            e.printStackTrace();
+//        }
+
+
         List<SearchBook> currentBookList = searchResultRepository.findAll();
         for (SearchBook searchBook : currentBookList) {
             if(!searchBook.isSelected()){
@@ -225,76 +244,97 @@ public class BookController extends BaseController {
         }
     }
 
-    private void checkBookResultSingle(SearchBook searchBook) {
-        List<List<Chapter>>   chapterAllWebsite = new ArrayList<>();
+    private  void checkBookResultSingle(SearchBook searchBook) {
         checkUpdateExecutorService.submit(() -> {
 //            logger.info(searchBook.title);
-            for (SearchBook.SL searchBookSL: searchBook.getSources() ) {
-                Crawler.catalog(searchBookSL, new ChapterCallback() {
-                    @Override
-                    public void onResponse(List<Chapter> chapters) {
-                        logger.info("onResponse:" + chapters.get(chapters.size() - 1).link + chapters.get(chapters.size() - 1).title + "\n");
-                        for (Chapter chapter:chapters) {
-                            chapter.setBookId(searchBook.getBookId());
-                        }
-                        chapterAllWebsite.add(chapters);
-                    }
-                    @Override
-                    public void onError(String msg) {
-                        logger.error("爬取错误 书名" + searchBook.getTitle() + "     " + msg + "\n");
-                    }
-                });
-            }
-//            logger.info("最好的列表:"+"书名 "+searchBook.getTitle()+"  最新章节  "+getBestChapterList(chapterAllWebsite).get(getBestChapterList(chapterAllWebsite).size()-1)+"");
-
-
-//            Random random = new Random();
-//            for (int i = 0; i <=chapterAllWebsite.size()-1 ; i++) {
-//                if (i ==0){
-//                    List<Chapter> item0 =    chapterAllWebsite.get(0);
-//                    item0 =  item0.subList(0,item0.size() - 1 - 7);
-//                    chapterAllWebsite.set(0,item0);
-//                    logger.info(""+chapterAllWebsite.get(i).get(chapterAllWebsite.get(i).size() -1));
-//
-//                    continue;
-//                }
-//                List<Chapter> item = chapterAllWebsite.get(i);
-//                item = item.subList(0,item.size() -1- random.nextInt(i) - random.nextInt(chapterAllWebsite.size()));
-//                chapterAllWebsite.set(i,item);
-//
-//                logger.info(""+chapterAllWebsite.get(i).get(chapterAllWebsite.get(i).size() -1));
-//            }
-
-
-            List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite);
-            logger.info("最好的列表 原列表修正后:" + "书名 " + searchBook.getTitle() + "  最新章节  " + bestChapterList.get(bestChapterList.size() - 1) + " \r\n \r\n\n");
-            String bestChapter = bestChapterList.get(bestChapterList.size() - 1).getTitle();
-            if(!searchBook.getLastChapter().equals(bestChapter)){
-                searchBook.setLastChapter(bestChapterList.get(bestChapterList.size() - 1).getTitle());
-                PushClient pushClient = new PushClient();
-                try {
-                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title,searchBook.getLastChapter());
-                } catch (ApiException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            for (int i = 0; i <=bestChapterList.size() - 1 ; i++) {
-                bestChapterList.get(i).setChapterIndex(i);
-            }
-            searchResultRepository.save(searchBook);
-            chapterRepository.saveAll(bestChapterList);
-
-//                PushWork pushWork = new PushWork();
-//                pushWork.setContent(searchBook.getLastChapter());
-//                pushWork.setAndroidTitle(searchBook.getTitle());
-//                pushWork.setTarget(1);
-//                pushWork.setAppkey(MobPushConfig.appkey);
-//                pushWork.setType(1);
-//                pushWork.setPlats(new Integer[1]);
-//                pushClient.sendPush(pushWork);
+            checkAllSource(searchBook);
 
         });
+    }
+    private static ThreadLocal<Integer> localVar = new ThreadLocal<>();
+    private void checkAllSource(SearchBook searchBook ) {
+        List<List<Chapter>>   chapterAllWebsite = new ArrayList<>();
+        localVar.set(0);
+        for (SearchBook.SL searchBookSL: searchBook.getSources() ) {
+            Crawler.catalog(searchBookSL, new ChapterCallback() {
+                @Override
+                public void onResponse(List<Chapter> chapters) {
+                    localVar.set(localVar.get()+1);
+                    logger.info("onResponse:" + chapters.get(chapters.size() - 1).link + chapters.get(chapters.size() - 1).title + "\n");
+                    for (Chapter chapter:chapters) {
+                        chapter.setBookId(searchBook.getBookId());
+                    }
+                    chapterAllWebsite.add(chapters);
+                    if (searchBook.getSources().size() ==localVar.get() ){
+                        singleBookResultComplete(searchBook,chapterAllWebsite);
+                    }
+                }
+                @Override
+                public void onError(String msg) {
+                    localVar.set(localVar.get()+1);
+                    logger.error("爬取错误 书名" + searchBook.getTitle() + "     " + msg + "\n");
+                    if (searchBook.getSources().size() ==localVar.get() ){
+                        singleBookResultComplete(searchBook,chapterAllWebsite);
+                    }
+                }
+            });
+        }
+    }
+
+    private synchronized void singleBookResultComplete(SearchBook searchBook,  List<List<Chapter>> chapterAllWebsite) {
+
+        List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite);
+        logger.error("chapterAllWebsite: size " + chapterAllWebsite.size()+"  searchBook SL size:"+ searchBook.getSources().size()+" \r\n \r\n\n");
+
+        logger.info("最好的列表 原列表修正后:" + "书名 " + searchBook.getTitle() + "  最新章节  " + bestChapterList.get(bestChapterList.size() - 1) + " \r\n \r\n\n");
+        String bestChapter = bestChapterList.get(bestChapterList.size() - 1).getTitle();
+        if(!searchBook.getLastChapter().equals(bestChapter)){
+            String originChapter = searchBook.getLastChapter();
+            logger.error("书名 " + searchBook.getTitle() + "  最新章节  searchBook.getLastChapter():" +searchBook.getLastChapter() +"   bestChapter: " +bestChapter+ " \r\n \r\n\n");
+            searchBook.setUpdateTime(System.currentTimeMillis());
+
+            searchBook.setLastChapter(bestChapter);
+            PushClient pushClient = new PushClient();
+            try {
+//                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title+"通知",searchBook.getLastChapter());
+                List<UserBook>  userBookList =  userBookRepository.findUserBookByBookId(searchBook.getBookId());
+                List<String>  registrationIdList = new ArrayList<>();
+                logger.info("userBookList: "+userBookList.toString());
+                for (UserBook userBook:userBookList) {
+                    if(null==userBook.getUserId()){
+                        continue;
+                    }
+                    Optional<User> userBookOptional = userRepository.findById(userBook.getUserId());
+                    if(userBookOptional.isPresent()){
+                        String regIdTemp = userBookOptional.get().getRegistrationId();
+                        if(!TextUtils.isEmpty(regIdTemp)){
+                            registrationIdList.add(regIdTemp);
+                            logger.info("registrationIdList:" + registrationIdList);
+                        }
+                    }
+                }
+                if(registrationIdList.size()>0){
+                    String[] registrationIdArray = registrationIdList.toArray(new String[registrationIdList.size()]);
+                    String[] content = new String[1];
+                    content[0] = searchBook.getLastChapter();
+                    PushWork work = new PushWork(MobPushConfig.appkey, System.currentTimeMillis() + ""+searchBook.getLastChapter().hashCode(), PlatEnum.all.getCode(), searchBook.getLastChapter(), PushTypeEnum.notify.getCode())
+                            .buildTarget(TargetEnum._4.getCode(), null, null, registrationIdArray, null, null)
+                            .buildAndroid(searchBook.getTitle(), AndroidNotifyStyleEnum.hangup.getCode(),content,true,true,true);
+                    pushClient.sendPush(work);
+//                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title+"通",searchBook.getLastChapter());
+//                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title+"原",originChapter);
+                    for (int i = 0; i <=bestChapterList.size() - 1 ; i++) {
+                        bestChapterList.get(i).setChapterIndex(i);
+                    }
+                    searchResultRepository.saveAndFlush(searchBook);
+                    chapterRepository.saveAll(bestChapterList);
+                }
+
+            } catch (ApiException e) {
+                e.printStackTrace();
+                logger.error(e.getStatus() + " " + e.getErrorCode() + " " + e.getErrorMessage() );
+            }
+        }
     }
 
     private  List<Chapter> baseChapterListModified(List<List<Chapter>> chapterAllWebsite) {
@@ -317,7 +357,6 @@ public class BookController extends BaseController {
                     index = i;
                 }
             }
-
             List<Chapter> extraChapters = bestChapterList.subList(bestChapterList.size() - 1 - index, bestChapterList.size());
             if(extraChapters.size()> 0){
                 logger.info("多加的列表"+extraChapters.toString());
@@ -346,7 +385,6 @@ public class BookController extends BaseController {
 
     private List<Chapter> getBetterChapterList(List<Chapter> chapterListA, List<Chapter> chapterListB) {
         logger.info("\n\r");
-
         logger.info("" + chapterListA.get(chapterListA.size() - 1) + "      " + chapterListB.get(chapterListB.size() - 1));
         logger.info("ASize:" + chapterListA.size() + "    " + "BSize:" + chapterListB.size());
         if (chapterListA.size() < chapterListB.size() - 10) {
@@ -362,12 +400,10 @@ public class BookController extends BaseController {
         for (Chapter chapterA : chapterListALast10) {
           if (-1 == chapterListBLast100.indexOf(chapterA)){
               logger.info("结果A" + chapterListA.get(chapterListA.size() - 1) + chapterA + "          " + chapterListBLast100 + "\n\r");
-
               return  chapterListA;
           }
       }
         logger.info("   结果B   " + chapterListB.get(chapterListB.size() - 1) + "\n\r");
-
         return  chapterListB;
   }
 
@@ -479,7 +515,7 @@ public class BookController extends BaseController {
     private static String token = "";
     private static String opToken = "opToken";
     private static String operator = "CMCC";
-
+    private String registrationId;
     @RequestMapping("/directLogin")
     public JSONObject directLogin(HttpServletRequest uerRequest) throws Exception {
         appkey = uerRequest.getParameter("appkey");
@@ -487,6 +523,8 @@ public class BookController extends BaseController {
         token = uerRequest.getParameter("token");
         opToken = uerRequest.getParameter("opToken");
         operator = uerRequest.getParameter("operator");
+        registrationId = uerRequest.getParameter("registrationId");
+        logger.info("registrationId: " +registrationId);
         String authHost = "http://identify.verify.mob.com/";
         String url = authHost + "auth/auth/sdkClientFreeLogin";
         HashMap<String, Object> request = new HashMap<>();
@@ -496,6 +534,7 @@ public class BookController extends BaseController {
         request.put("operator", operator);
         request.put("timestamp", System.currentTimeMillis());
         request.put("sign", SignUtil.getSign(request, appSecret));
+
         String response = postRequestNoSecurity(url, null, request);
         JSONObject jsonObject = JSONObject.parseObject(response);
         if (200 == jsonObject.getInteger("status")) {
@@ -505,7 +544,7 @@ public class BookController extends BaseController {
             resBean.setMobileToken(token);
 //            jsonObject.put("res", JSONObject.parseObject(new String(decode)));
             jsonObject.put("res", resBean);
-            userService.saveUserDirect(resBean.getPhone(),resBean.getMobileToken());
+            userService.saveUserDirect(resBean.getPhone(),resBean.getMobileToken(),registrationId);
         }
         System.out.println(jsonObject);
         return jsonObject;

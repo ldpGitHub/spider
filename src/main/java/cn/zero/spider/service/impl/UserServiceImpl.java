@@ -45,14 +45,16 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     }
 
     @Override
-    public User saveUserDirect(String username, String mobileToken) {
+    public User saveUserDirect(String username, String mobileToken,String registrationId) {
         User user = userRepository.findUserByUsername(username);
         if (user == null) {
             User newUser = new User();
             newUser.setUsername(username);
             newUser.setMobileToken(mobileToken);
+            newUser.setRegistrationId(registrationId);
             return userRepository.saveAndFlush(newUser);
         }else {
+            user.setRegistrationId(registrationId);
             user.setMobileToken(mobileToken);
             return userRepository.saveAndFlush(user);
         }

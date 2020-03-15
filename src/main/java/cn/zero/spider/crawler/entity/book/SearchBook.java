@@ -53,6 +53,8 @@ public class SearchBook implements Serializable {
 
     public String lastChapter;
 
+    public long updateTime;
+
     /**
      * 源&目录列表链接
      */

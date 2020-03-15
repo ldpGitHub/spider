@@ -26,8 +26,10 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
+    @JsonIgnore
+    private String registrationId;
     private String username;
-    @OneToMany(fetch = FetchType.EAGER, cascade = {CascadeType.ALL}/*, orphanRemoval = true*/)
+    @OneToMany(fetch = FetchType.EAGER, cascade = {CascadeType.ALL,CascadeType.REMOVE}, orphanRemoval = true)
     @JoinColumn(name = "userId")
     private List<UserBook> userBookList = new ArrayList<>();
 
@@ -106,6 +108,14 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public String getRegistrationId() {
+        return registrationId;
+    }
+
+    public void setRegistrationId(String registrationId) {
+        this.registrationId = registrationId;
     }
 
 }
