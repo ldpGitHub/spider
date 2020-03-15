@@ -51,9 +51,7 @@ public class SearchBook implements Serializable {
     @Lob
     @Column(name = "bookDesc", columnDefinition = "text")
     private String desc;
-
     private String lastChapter;
-
     public long updateTime;
 
     /**
