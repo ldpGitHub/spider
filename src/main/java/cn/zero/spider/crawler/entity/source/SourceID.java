@@ -5,31 +5,30 @@ package cn.zero.spider.crawler.entity.source;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-public enum SourceID{
+public enum SourceID {
     CHINESE81(1),
-    LIEWEN(2)  ,
+    LIEWEN(2),
     ZHUISHU(3),
-       BIQUG(4),
-       WENXUEMI(5),
-       CHINESEXIAOSHUO(6),
-        DINGDIAN(7),
-        BIQUGER(8),
-        CHINESEZHUOBI(9),
-       DASHUBAO(10),
-        CHINESEWUZHOU(11),
-      UCSHUMENG(12),
-     QUANXIAOSHUO(13),
-       YANMOXUAN(14),
-       AIQIWENXUE(15),
-       QIANQIANXIAOSHUO(16),
-       PIAOTIANWENXUE(17),
-   SUIMENGXIAOSHUO(18),
-       DAJIADUSHUYUAN(19),
-       SHUQIBA(20),
+    BIQUG(4),
+    WENXUEMI(5),
+    CHINESEXIAOSHUO(6),
+    DINGDIAN(7),
+    BIQUGER(8),
+    CHINESEZHUOBI(9),
+    DASHUBAO(10),
+    CHINESEWUZHOU(11),
+    UCSHUMENG(12),
+    QUANXIAOSHUO(13),
+    YANMOXUAN(14),
+    AIQIWENXUE(15),
+    QIANQIANXIAOSHUO(16),
+    PIAOTIANWENXUE(17),
+    SUIMENGXIAOSHUO(18),
+    DAJIADUSHUYUAN(19),
+    SHUQIBA(20),
     XIAOSHUO52(21),
     XIAOSHUO98(22),
     QIQIXIAOSHUO(23);
-
 
 
     public int getId() {
@@ -37,6 +36,7 @@ public enum SourceID{
     }
 
     private int id;
+
     SourceID(int id) {
         this.id = id;
     }

@@ -3,6 +3,7 @@ package cn.zero.spider.crawler.entity.book;
 
 import cn.zero.spider.crawler.entity.source.Source;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -31,17 +32,17 @@ public class SearchBook implements Serializable {
     /**
      * 封面图
      */
-    public String cover;
+    private String cover;
 
     /**
      * 书名
      */
-    public String title;
+    private String title;
 
     /**
      * 作者名
      */
-    public String author;
+    private String author;
 
     /**
      * 描述
@@ -49,9 +50,9 @@ public class SearchBook implements Serializable {
 //    @Column(name = "bookDesc",columnDefinition = "BLOB NOT NULL")
     @Lob
     @Column(name = "bookDesc", columnDefinition = "text")
-    public String desc;
+    private String desc;
 
-    public String lastChapter;
+    private String lastChapter;
 
     public long updateTime;
 
@@ -60,12 +61,12 @@ public class SearchBook implements Serializable {
      */
     @OneToMany(fetch = FetchType.EAGER, cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "bookId")
-    public List<SL> sources = new ArrayList<>();
+    private List<SL> sources = new ArrayList<>();
 
-    public Long getBookId() {
+  /*  public Long getBookId() {
         bookId = Long.valueOf(this.hashCode());
         return bookId;
-    }
+    }*/
 
     @Override
     public boolean equals(Object o) {
@@ -86,6 +87,7 @@ public class SearchBook implements Serializable {
      */
     @Data
     @Entity
+    @NoArgsConstructor
     public static class SL implements Serializable {
 
         private static final long serialVersionUID = -8319559717065460819L;
