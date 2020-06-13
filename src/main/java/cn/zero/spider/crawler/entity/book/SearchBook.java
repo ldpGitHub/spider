@@ -85,7 +85,7 @@ public class SearchBook implements Serializable {
      */
     @Data
     @Entity
-    @NoArgsConstructor
+
     public static class SL implements Serializable {
 
         private static final long serialVersionUID = -8319559717065460819L;
@@ -106,6 +106,8 @@ public class SearchBook implements Serializable {
 
         public Source source;
 
+        public SL() {
+        }
         public SL(String link, Source source) {
             this.link = link;
             this.source = source;

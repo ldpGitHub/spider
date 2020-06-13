@@ -5,9 +5,17 @@ spring:
     static-locations: file:${upload.root.path},classpath:static/
   datasource: # 数据源配置
     driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/spider?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai #jdbc:mysql://47.98.166.103:3306/spider?useUnicode=true&characterEncoding=utf-8
+#    url: jdbc:mysql://127.0.0.1:3306/spider?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://47.98.166.103:3306/spider?useUnicode=true&characterEncoding=utf-8
+#    url: jdbc:mysql://180.76.134.114:3306/spider?useUnicode=true&characterEncoding=utf-8
+
+#    url: jdbc:mysql://172.17.0.2:3306/spider?useUnicode=true&characterEncoding=utf-8
+
+
+
+
     username: root
-    password: 12345a
+    password: general*PASSWORD
     type: com.alibaba.druid.pool.DruidDataSource
   jpa:
     hibernate:

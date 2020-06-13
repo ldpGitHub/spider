@@ -440,7 +440,7 @@ public class BookController extends BaseController {
         if (chaptersResult.size()>0){
             return  chaptersResult;
         }else {
-                Crawler.catalog(searchBookResult.sources.get(0), new ChapterCallback() {
+                Crawler.catalog(searchBookResult.getSources().get(0), new ChapterCallback() {
                     @Override
                     public void onResponse(List<Chapter> chapters) {
                         for (Chapter chapter:chapters) {
@@ -489,9 +489,9 @@ public class BookController extends BaseController {
         book = searchResultRepository.findById(bookId);
         chapter = chapterRepository.findById(chapterId);
         if (book.isPresent() && chapter.isPresent()) {
-            logger.info(book.get().sources.toString());
+            logger.info(book.get().getSources().toString());
 
-            Crawler.content(book.get().sources.get(0), chapter.get().link, new ContentCallback() {
+            Crawler.content(book.get().getSources().get(0), chapter.get().link, new ContentCallback() {
                 @Override
                 public void onResponse(String content) {
                     contentResponse.setContent(content);
