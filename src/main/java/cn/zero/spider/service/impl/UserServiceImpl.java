@@ -1,8 +1,11 @@
 package cn.zero.spider.service.impl;
 
+import cn.zero.spider.controller.BookController;
 import cn.zero.spider.pojo.User;
 import cn.zero.spider.repository.UserRepository;
 import cn.zero.spider.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class UserServiceImpl implements UserDetailsService, UserService {
+    private Logger logger = LoggerFactory.getLogger(BookController.class);
 
     @Autowired
     private PasswordEncoder encoder;
@@ -46,6 +50,7 @@ public class UserServiceImpl implements UserDetailsService, UserService {
 
     @Override
     public User saveUserDirect(String username, String mobileToken,String registrationId) {
+        logger.error (mobileToken);
         User user = userRepository.findUserByUsername(username);
         if (user == null) {
             User newUser = new User();
@@ -55,6 +60,7 @@ public class UserServiceImpl implements UserDetailsService, UserService {
             return userRepository.saveAndFlush(newUser);
         }else {
             user.setRegistrationId(registrationId);
+
             user.setMobileToken(mobileToken);
             return userRepository.saveAndFlush(user);
         }

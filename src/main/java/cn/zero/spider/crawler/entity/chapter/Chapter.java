@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -40,8 +41,12 @@ public class Chapter implements Serializable {
 
     public String link;
 
+//    public List <String> allLinks;
+
+
+
     public Long getChapterId() {
-        chapterId = StringUtils.isBlank(link) ? null : (long) Objects.hash(getTitle(), getBookId());
+        chapterId = StringUtils.isBlank(link) ? null : (long) Objects.hash(getTitle(), getBookId() );
         return chapterId;
     }
 
@@ -58,5 +63,6 @@ public class Chapter implements Serializable {
     public int hashCode() {
         return Objects.hash(getTitle(), getBookId());
     }
+
 
 }

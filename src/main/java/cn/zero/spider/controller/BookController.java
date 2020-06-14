@@ -37,7 +37,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -213,9 +212,9 @@ public class BookController extends BaseController {
         }
        Optional<SearchBook> book= searchResultRepository.findById(bookId);
         SearchBook searchBook = book.orElse(null);
-        if(searchBook!=null){
+        if (searchBook != null) {
             searchBook.setSelected(true);
-            if(0 == searchBook.getUpdateTime()){
+            if (0 == searchBook.getUpdateTime()) {
                 searchBook.setUpdateTime(System.currentTimeMillis());
             }
             searchResultRepository.save(searchBook);
@@ -224,7 +223,7 @@ public class BookController extends BaseController {
         return searchBook;
     }
 
-    @Scheduled(initialDelay=1000*5, fixedRate=1000*60*10)
+    @Scheduled(initialDelay = 1000 * 5, fixedRate = 1000 * 60 * 15)
     private void checkUpdateSchedule() {
         PushClient pushClient = new PushClient();
 //        try {
@@ -264,6 +263,7 @@ public class BookController extends BaseController {
                     for (Chapter chapter:chapters) {
                         chapter.setBookId(searchBook.getBookId());
                     }
+
                     chapterAllWebsite.add(chapters);
                     if (searchBook.getSources().size() ==localVar.get() ){
                         singleBookResultComplete(searchBook,chapterAllWebsite);
@@ -283,7 +283,7 @@ public class BookController extends BaseController {
 
     private synchronized void singleBookResultComplete(SearchBook searchBook,  List<List<Chapter>> chapterAllWebsite) {
 
-        List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite);
+        List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite ,searchBook);
         logger.error("chapterAllWebsite: size " + chapterAllWebsite.size()+"  searchBook SL size:"+ searchBook.getSources().size()+" \r\n \r\n\n");
 
         logger.info("最好的列表 原列表修正后:" + "书名 " + searchBook.getTitle() + "  最新章节  " + bestChapterList.get(bestChapterList.size() - 1) + " \r\n \r\n\n");
@@ -337,9 +337,13 @@ public class BookController extends BaseController {
         }
     }
 
-    private  List<Chapter> baseChapterListModified(List<List<Chapter>> chapterAllWebsite) {
+    private  List<Chapter> baseChapterListModified(List<List<Chapter>> chapterAllWebsite ,SearchBook searchBook) {
 
         List<Chapter> bestChapterList  =  getBestChapterList(chapterAllWebsite);
+
+//        for ( : ) {
+//
+//        }
 //        logger.info("算出来的最好章节" + bestChapterList.get(bestChapterList.size() - 1));
         List<Chapter> oriChapterList = chapterAllWebsite.get(0);
 
@@ -360,6 +364,22 @@ public class BookController extends BaseController {
             List<Chapter> extraChapters = bestChapterList.subList(bestChapterList.size() - 1 - index, bestChapterList.size());
             if(extraChapters.size()> 0){
                 logger.info("多加的列表"+extraChapters.toString());
+                Chapter lastChapter =  extraChapters.get(extraChapters.size() - 1);
+                String lastChapterLink = extraChapters.get(extraChapters.size() - 1).link ;
+                Crawler.content(searchBook.getSources().get(0), lastChapterLink, new ContentCallback() {
+                    @Override
+                    public void onResponse(String content) {
+                        Content  lastChapterContentResponse = new Content(lastChapter.getChapterId());
+                        lastChapterContentResponse.setContent(content);
+                        lastChapterContentResponse.setLink(lastChapter.link);
+                        lastChapterContentResponse.setTitle(lastChapter.title);
+                        contentRepository.save(lastChapterContentResponse);
+                    }
+                    @Override
+                    public void onError(String msg) {
+
+                    }
+                });
             }
             oriChapterList.addAll(extraChapters);
             return oriChapterList;
@@ -435,6 +455,7 @@ public class BookController extends BaseController {
         final List<Chapter>  chaptersResult ;
         Example<Chapter> exampleChapter= Example.of(chapterQuery);
         Sort chapterSort  =Sort.by(new Sort.Order(Sort.Direction.ASC,"chapterIndex"));
+
         chaptersResult = chapterRepository.findAll(exampleChapter,chapterSort);
         logger.info("结果大小:"+chaptersResult.size());
         if (chaptersResult.size()>0){
@@ -472,41 +493,54 @@ public class BookController extends BaseController {
      * @param request 请求
      * @return
      */
+    private   Content  contentResponse = null ;
     @RequestMapping("/getBookContent")
     public Content getBookContent(HttpServletRequest request) {
         Optional<Chapter> chapter  ;
         Optional<SearchBook> book;
-        final  Content  contentResponse = new Content() ;
         Long bookId = 0L;
         Long chapterId = 0L;
+        int sourceIndex = 0;
         try {
             bookId = Long.valueOf(request.getParameter("bookId"));
             chapterId = Long.valueOf(request.getParameter("chapterId"));
+            sourceIndex = Integer.valueOf(request.getParameter("sourceIndex"));
 
         } catch (Exception e) {
             logger.error(e.toString());
         }
         book = searchResultRepository.findById(bookId);
         chapter = chapterRepository.findById(chapterId);
-        if (book.isPresent() && chapter.isPresent()) {
+
+        if (book.isPresent() && chapter.isPresent() ) {
             logger.info(book.get().getSources().toString());
+            Optional<Content>  contentOptional = contentRepository.findById(chapter.get().getChapterId());
+            if(contentOptional.isPresent() && 0 == sourceIndex){
+                contentResponse = contentOptional.get();
+            }else {
 
-            Crawler.content(book.get().getSources().get(0), chapter.get().link, new ContentCallback() {
-                @Override
-                public void onResponse(String content) {
-                    contentResponse.setContent(content);
-                    contentResponse.setLink( chapter.get().link);
-                    contentResponse.setTitle( chapter.get().title);
-                    contentRepository.save(contentResponse);
-                }
-                @Override
-                public void onError(String msg) {
+                Crawler.content(book.get().getSources().get(sourceIndex % book.get().getSources().size()), chapter.get().link, new ContentCallback() {
+                    @Override
+                    public void onResponse(String content) {
+                        contentResponse = new Content(chapter.get().getChapterId());
+                        contentResponse.setContent(content);
+                        contentResponse.setLink( chapter.get().link);
+                        contentResponse.setTitle( chapter.get().title);
+                        contentRepository.save(contentResponse);
+                    }
+                    @Override
+                    public void onError(String msg) {
 
-                }
-            });
+                    }
+                });
+            }
+
         }
         return contentResponse;
     }
+
+
+
 
 
 

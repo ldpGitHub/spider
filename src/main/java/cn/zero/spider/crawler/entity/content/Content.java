@@ -14,9 +14,10 @@ import java.io.Serializable;
 @Data
 @Table(name = "content")
 public class Content implements Serializable {
+
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long contenId; // 主键ID
+    private Long chapterId; // 主键ID
 
     public String title;
 
@@ -24,9 +25,14 @@ public class Content implements Serializable {
 
     public String link;
 
+    public Content(Long chapterId) {
+        this.chapterId = chapterId;
+    }
+
     // @Column(columnDefinition = "BLOB NOT NULL")
     @Lob
     @Column(columnDefinition = "text")
     public String content;
+
 
 }

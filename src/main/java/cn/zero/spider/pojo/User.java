@@ -59,6 +59,8 @@ public class User implements UserDetails {
     private String password;
 
     @JsonIgnore
+    @Lob
+    @Column(columnDefinition = "text")
     private String mobileToken;
 
     public String getMobileToken() {
