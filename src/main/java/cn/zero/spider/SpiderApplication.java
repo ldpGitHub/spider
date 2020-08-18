@@ -40,7 +40,7 @@ import us.codecraft.webmagic.scheduler.RedisScheduler;
 @Configuration
 @MapperScan({"cn.zero.spider.dao"})
 @EnableCaching
-@EnableScheduling
+//@EnableScheduling
 public class SpiderApplication extends SpringBootServletInitializer {
     @Override
     protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
