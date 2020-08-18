@@ -320,6 +320,7 @@ public class BookController extends BaseController {
                     PushWork work = new PushWork(MobPushConfig.appkey, System.currentTimeMillis() + ""+searchBook.getLastChapter().hashCode(), PlatEnum.all.getCode(), searchBook.getLastChapter(), PushTypeEnum.notify.getCode())
                             .buildTarget(TargetEnum._4.getCode(), null, null, registrationIdArray, null, null)
                             .buildAndroid(searchBook.getTitle(), AndroidNotifyStyleEnum.hangup.getCode(),content,true,true,true);
+                    work.setRepate(true);
                     pushClient.sendPush(work);
 //                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title+"通",searchBook.getLastChapter());
 //                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title+"原",originChapter);
