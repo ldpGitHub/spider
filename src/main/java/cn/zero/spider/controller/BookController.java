@@ -7,6 +7,7 @@ import cn.zero.spider.crawler.entity.content.Content;
 import cn.zero.spider.crawler.source.callback.ChapterCallback;
 import cn.zero.spider.crawler.source.callback.ContentCallback;
 import cn.zero.spider.crawler.source.callback.SearchCallback;
+import cn.zero.spider.ldp.Ldp;
 import cn.zero.spider.pojo.*;
 import cn.zero.spider.push.ApiException;
 import cn.zero.spider.push.MobPushConfig;
@@ -22,10 +23,9 @@ import cn.zero.utils.*;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.gson.Gson;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.apache.http.util.TextUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
@@ -38,9 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 
@@ -50,10 +48,9 @@ import java.util.stream.Collectors;
  * @author 蔡元豪
  * @date 2018 /6/24 08:57
  */
+@Slf4j
 @RestController
-public class BookController extends BaseController {
-    private static final String TAG  = BookController.class.getSimpleName();
-    private Logger logger = LoggerFactory.getLogger(BookController.class);
+public class BookController {
 
     @Autowired
     private SearchResultRepository searchResultRepository;
@@ -73,38 +70,54 @@ public class BookController extends BaseController {
      * @param request 请求
      * @return userResult 搜索结果
      */
-    private ExecutorService checkUpdateExecutorService = Executors.newFixedThreadPool(3);
+    private final ExecutorService checkUpdateExecutorService = Executors.newFixedThreadPool(3);
 
+    /**
+     * 搜索书籍
+     * @return 书籍集合
+     */
     @RequestMapping( "/search")
-    public  List<SearchBook> userSearch ( HttpServletRequest request) {
-        List<SearchBook> userResult =new ArrayList<>(),finalResult = new ArrayList<>();
-        String bookName = request.getParameter("bookName");
-        Crawler.search(bookName,true, new SearchCallback() {
+    public List<SearchBook> userSearch(String bookName) throws ExecutionException, InterruptedException {
+        if (true) {
+            return Ldp.search(bookName, (data, done) -> {
+                System.out.println(data.get());
+                return true;
+            });
+
+        }
+
+
+        List<SearchBook> userResult = new ArrayList<>(),finalResult = new ArrayList<>();
+
+        /*Crawler.search(bookName,true, new SearchCallback() {
             @Override
             public synchronized void onResponse(String keyword, List<SearchBook> appendList) {
-                logger.info("搜索结果:" + keyword + ": " + appendList);
+                log.info("搜索结果:" + keyword + ": " + appendList);
                 if (appendList.size() > 0) {
                     userResult.addAll(appendList);
                 }
             }
             @Override
             public void onFinish() {
-                logger.info("onFinish: 结果大小" + userResult.size());
+                log.info("onFinish: 结果大小" + userResult.size());
             }
             @Override
             public void onError(String msg) {
-                logger.error(msg);
+                log.error(msg);
             }
-        });
-
-
+        });*/
+        FutureTask<List<SearchBook>> task = new FutureTask<>(() -> userResult);
         checkUpdateExecutorService.submit(() -> Crawler.search(bookName,false, new SearchCallback() {
             @Override
             public void onResponse(String keyword, List<SearchBook> appendList) {
+                if (!task.isDone()) {
+                    userResult.addAll(appendList);
+                    checkUpdateExecutorService.execute(task);
+                }
                 for (SearchBook searchBook : appendList) {
                     if (finalResult.contains(searchBook)) {
                         finalResult.get(finalResult.indexOf(searchBook)).getSources().addAll(searchBook.getSources());
-                        logger.info("增加书源头: " + finalResult.get(finalResult.indexOf(searchBook)).getSources());
+                        log.info("增加书源头: " + finalResult.get(finalResult.indexOf(searchBook)).getSources());
                     } else {
                         finalResult.add(searchBook);
                     }
@@ -112,7 +125,7 @@ public class BookController extends BaseController {
             }
             @Override
             public void onFinish() {
-                logger.info("爬取完成: " + finalResult);
+                log.info("爬取完成: " + finalResult);
                 for (SearchBook searchBook: finalResult) {
                     searchResultRepository.saveAndFlush(searchBook);
                 }
@@ -123,15 +136,11 @@ public class BookController extends BaseController {
             }
         }));
 
-        logger.info("userSearch请求结果: "+userResult);
-//        ModelAndView modelAndView = new ModelAndView(new MyView());
-//        Map<String, Object> data = new HashMap<>();
-//        data.put("success",true);
-//        data.put("message","成功");
-//        data.put("res",new Gson().toJson(userResult) );
-//        modelAndView.addAllObjects(data);
+        log.info("userSearch请求结果: "+userResult);
+
         searchResultRepository.saveAll(userResult);
-        return userResult;
+        //return userResult;
+        return task.get();
     }
 
     @PostMapping("/synBookShelf")
@@ -160,7 +169,7 @@ public class BookController extends BaseController {
         userBookRepository.deleteAllByBookId(user.getUserId());
         userRepository.saveAndFlush(user);
 
-      logger.error("userId: "+user.getUserId());
+        log.error("userId: "+user.getUserId());
         List<UserBook> userBooks = ids.stream().map(e -> new UserBook(null, user.getUserId(), e)).collect(Collectors.toList());
 //        user.setUserBookList(userBooks);
         user.getUserBookList().addAll(userBooks);
@@ -174,8 +183,8 @@ public class BookController extends BaseController {
     public List<UserBook>  getBookShelf() {
         String username = (String)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User user = userService.getUserByUsername(username);
-        logger.info(user + "");
-        logger.info(user.getUserBookList() + "");
+        log.info(user + "");
+        log.info(user.getUserBookList() + "");
         return user.getUserBookList();
     }
 
@@ -186,12 +195,11 @@ public class BookController extends BaseController {
 
         User user = userService.getUserByUsername(mobile);
         if(!mobileToken.equals(user.getMobileToken())){
-           throw  new Exception("运营商token失效");
+           throw new Exception("运营商token失效");
         }
 
-        logger.info(user + "");
-        logger.info(user.getUserBookList() + "");
-        return   user.getUserBookList();
+        log.info("user: {}, UserBookList: {}", user, user.getUserBookList());
+        return user.getUserBookList();
     }
 
 
@@ -208,7 +216,7 @@ public class BookController extends BaseController {
         try {
             bookId= Long.valueOf(request.getParameter("bookId"));
         }catch (Exception e){
-            logger.error(e.toString());
+            log.error(e.toString());
         }
        Optional<SearchBook> book= searchResultRepository.findById(bookId);
         SearchBook searchBook = book.orElse(null);
@@ -259,7 +267,7 @@ public class BookController extends BaseController {
                 @Override
                 public void onResponse(List<Chapter> chapters) {
                     localVar.set(localVar.get()+1);
-                    logger.info("onResponse:" + chapters.get(chapters.size() - 1).link + chapters.get(chapters.size() - 1).title + "\n");
+                    log.info("onResponse:" + chapters.get(chapters.size() - 1).link + chapters.get(chapters.size() - 1).title + "\n");
                     for (Chapter chapter:chapters) {
                         chapter.setBookId(searchBook.getBookId());
                     }
@@ -272,7 +280,7 @@ public class BookController extends BaseController {
                 @Override
                 public void onError(String msg) {
                     localVar.set(localVar.get()+1);
-                    logger.error("爬取错误 书名" + searchBook.getTitle() + "     " + msg + "\n");
+                    log.error("爬取错误 书名" + searchBook.getTitle() + "     " + msg + "\n");
                     if (searchBook.getSources().size() ==localVar.get() ){
                         singleBookResultComplete(searchBook,chapterAllWebsite);
                     }
@@ -284,13 +292,13 @@ public class BookController extends BaseController {
     private synchronized void singleBookResultComplete(SearchBook searchBook,  List<List<Chapter>> chapterAllWebsite) {
 
         List<Chapter> bestChapterList  = baseChapterListModified(chapterAllWebsite ,searchBook);
-        logger.error("chapterAllWebsite: size " + chapterAllWebsite.size()+"  searchBook SL size:"+ searchBook.getSources().size()+" \r\n \r\n\n");
+        log.error("chapterAllWebsite: size " + chapterAllWebsite.size()+"  searchBook SL size:"+ searchBook.getSources().size()+" \r\n \r\n\n");
 
-        logger.info("最好的列表 原列表修正后:" + "书名 " + searchBook.getTitle() + "  最新章节  " + bestChapterList.get(bestChapterList.size() - 1) + " \r\n \r\n\n");
+        log.info("最好的列表 原列表修正后:" + "书名 " + searchBook.getTitle() + "  最新章节  " + bestChapterList.get(bestChapterList.size() - 1) + " \r\n \r\n\n");
         String bestChapter = bestChapterList.get(bestChapterList.size() - 1).getTitle();
         if(!searchBook.getLastChapter().equals(bestChapter)){
             String originChapter = searchBook.getLastChapter();
-            logger.error("书名 " + searchBook.getTitle() + "  最新章节  searchBook.getLastChapter():" +searchBook.getLastChapter() +"   bestChapter: " +bestChapter+ " \r\n \r\n\n");
+            log.error("书名 " + searchBook.getTitle() + "  最新章节  searchBook.getLastChapter():" +searchBook.getLastChapter() +"   bestChapter: " +bestChapter+ " \r\n \r\n\n");
             searchBook.setUpdateTime(System.currentTimeMillis());
 
             searchBook.setLastChapter(bestChapter);
@@ -299,7 +307,7 @@ public class BookController extends BaseController {
 //                    pushClient.createPushDefaultNotify(System.currentTimeMillis()+""+searchBook.getLastChapter().hashCode() ,searchBook.title+"通知",searchBook.getLastChapter());
                 List<UserBook>  userBookList =  userBookRepository.findUserBookByBookId(searchBook.getBookId());
                 List<String>  registrationIdList = new ArrayList<>();
-                logger.info("userBookList: "+userBookList.toString());
+                log.info("userBookList: "+userBookList.toString());
                 for (UserBook userBook:userBookList) {
                     if(null==userBook.getUserId()){
                         continue;
@@ -309,7 +317,7 @@ public class BookController extends BaseController {
                         String regIdTemp = userBookOptional.get().getRegistrationId();
                         if(!TextUtils.isEmpty(regIdTemp)){
                             registrationIdList.add(regIdTemp);
-                            logger.info("registrationIdList:" + registrationIdList);
+                            log.info("registrationIdList:" + registrationIdList);
                         }
                     }
                 }
@@ -333,7 +341,7 @@ public class BookController extends BaseController {
 
             } catch (ApiException e) {
                 e.printStackTrace();
-                logger.error(e.getStatus() + " " + e.getErrorCode() + " " + e.getErrorMessage() );
+                log.error(e.getStatus() + " " + e.getErrorCode() + " " + e.getErrorMessage() );
             }
         }
     }
@@ -364,7 +372,7 @@ public class BookController extends BaseController {
             }
             List<Chapter> extraChapters = bestChapterList.subList(bestChapterList.size() - 1 - index, bestChapterList.size());
             if(extraChapters.size()> 0){
-                logger.info("多加的列表"+extraChapters.toString());
+                log.info("多加的列表"+extraChapters.toString());
                 Chapter lastChapter =  extraChapters.get(extraChapters.size() - 1);
                 String lastChapterLink = extraChapters.get(extraChapters.size() - 1).link ;
                 Crawler.content(searchBook.getSources().get(0), lastChapterLink, new ContentCallback() {
@@ -405,9 +413,9 @@ public class BookController extends BaseController {
     }
 
     private List<Chapter> getBetterChapterList(List<Chapter> chapterListA, List<Chapter> chapterListB) {
-        logger.info("\n\r");
-        logger.info("" + chapterListA.get(chapterListA.size() - 1) + "      " + chapterListB.get(chapterListB.size() - 1));
-        logger.info("ASize:" + chapterListA.size() + "    " + "BSize:" + chapterListB.size());
+        log.info("\n\r");
+        log.info("" + chapterListA.get(chapterListA.size() - 1) + "      " + chapterListB.get(chapterListB.size() - 1));
+        log.info("ASize:" + chapterListA.size() + "    " + "BSize:" + chapterListB.size());
         if (chapterListA.size() < chapterListB.size() - 10) {
             return chapterListB;
         } else if (chapterListB.size() < chapterListA.size() - 10) {
@@ -420,11 +428,11 @@ public class BookController extends BaseController {
         List<Chapter> chapterListBLast100 = chapterListB.subList(chapterListB.size() - 1 - 100, chapterListB.size());
         for (Chapter chapterA : chapterListALast10) {
           if (-1 == chapterListBLast100.indexOf(chapterA)){
-              logger.info("结果A" + chapterListA.get(chapterListA.size() - 1) + chapterA + "          " + chapterListBLast100 + "\n\r");
+              log.info("结果A" + chapterListA.get(chapterListA.size() - 1) + chapterA + "          " + chapterListBLast100 + "\n\r");
               return  chapterListA;
           }
       }
-        logger.info("   结果B   " + chapterListB.get(chapterListB.size() - 1) + "\n\r");
+        log.info("   结果B   " + chapterListB.get(chapterListB.size() - 1) + "\n\r");
         return  chapterListB;
   }
 
@@ -443,7 +451,7 @@ public class BookController extends BaseController {
         try {
             bookId= Long.valueOf(request.getParameter("bookId"));
         }catch (Exception e){
-            logger.error(e.toString());
+            log.error(e.toString());
         }
         book= searchResultRepository.findById(bookId);
 
@@ -458,7 +466,7 @@ public class BookController extends BaseController {
         Sort chapterSort  =Sort.by(new Sort.Order(Sort.Direction.ASC,"chapterIndex"));
 
         chaptersResult = chapterRepository.findAll(exampleChapter,chapterSort);
-        logger.info("结果大小:"+chaptersResult.size());
+        log.info("结果大小:"+chaptersResult.size());
         if (chaptersResult.size()>0){
             return  chaptersResult;
         }else {
@@ -482,7 +490,7 @@ public class BookController extends BaseController {
                     }
                 });
             }
-            logger.info("直接爬的" +chaptersResult);
+            log.info("直接爬的" +chaptersResult);
             return  chaptersResult;
         }
 
@@ -508,13 +516,13 @@ public class BookController extends BaseController {
             sourceIndex = Integer.valueOf(request.getParameter("sourceIndex"));
 
         } catch (Exception e) {
-            logger.error(e.toString());
+            log.error(e.toString());
         }
         book = searchResultRepository.findById(bookId);
         chapter = chapterRepository.findById(chapterId);
 
         if (book.isPresent() && chapter.isPresent() ) {
-            logger.info(book.get().getSources().toString());
+            log.info(book.get().getSources().toString());
             Optional<Content>  contentOptional = contentRepository.findById(chapter.get().getChapterId());
             if(contentOptional.isPresent() && 0 == sourceIndex){
                 contentResponse = contentOptional.get();
@@ -559,7 +567,7 @@ public class BookController extends BaseController {
         opToken = uerRequest.getParameter("opToken");
         operator = uerRequest.getParameter("operator");
         registrationId = uerRequest.getParameter("registrationId");
-        logger.info("registrationId: " +registrationId);
+        log.info("registrationId: " +registrationId);
         String authHost = "http://identify.verify.mob.com/";
         String url = authHost + "auth/auth/sdkClientFreeLogin";
         HashMap<String, Object> request = new HashMap<>();
